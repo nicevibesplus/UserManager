@@ -1,0 +1,13 @@
+{
+    "LDAPAdmin": "cn=root,dc=example,dc=com",
+    "LDAPPass": "blutwurst1",
+
+    "PrivateKey": "privkey.rsa",
+    "PublicKey": "pubkey.rsa",
+
+    "LDAPserver": "example.com",
+    "LDAPPort": "123",
+
+    "LDAPBaseDN": "dc=example,dc=com",
+    "LDAPAdminFilter": "(&(objectClass=organizationalPerson)(memberOf=cn=admins,dc=example,dc=com))"
+}
