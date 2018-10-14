@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"gopkg.in/ldap.v2"
+	"github.com/pkg/errors"
+	"strings"
 )
 
 
@@ -69,11 +71,20 @@ func LDAPAddUser(dn string, user UserCredentials) error {
 	return nil
 }
 
-func LDAPAddUserToGroup(dn, groupname string) error {
+func LDAPAddUserToGroup(username, groupname string) error {
 	l := pLDAPConnectAdmin()
+
+	// Validate User
+	sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPUserfilter, username))
+	Fail(err)
+	if len(sr) != 1 {
+		// User does not exist or too many entries returned
+		return errors.New("Invalid Username supplied!")
+	}
+
 	mr := ldap.NewModifyRequest("cn=" + groupname + "," + configuration.LDAPBaseDN)
-	mr.Add("member", []string{dn})
-	err := l.Modify(mr)
+	mr.Add("member", []string{sr[0].DN})
+	err = l.Modify(mr)
 	l.Close()
 	if err != nil {
 		return err
@@ -167,9 +178,20 @@ func LDAPViewUsers() (users []string, err error) {
 	)
 	Fail(err)
 	users = make([]string, len(result))
-	for i:= range result {
-		users[i] = result[i].DN
+	for i := range result {
+		groups, err := pLDAPSearch([]string{"cn"}, fmt.Sprintf(configuration.LDAPUserGroups, result[i].DN))
+		Fail(err)
+		var groupList = ""
+		for j := range groups {
+			groupList += groups[j].DN + ";"
+		}
+		groupList = groupList[:len(groupList)-1]
+
+		users[i] = "{" + "\"name\": \"" + result[i].DN + "\"," +
+						 "\"groups\": \"" + groupList + "\"}"
+		users[i] = strings.Replace(users[i], "," + configuration.LDAPBaseDN,"",-1)
 	}
+
 	return users, nil
 }
 

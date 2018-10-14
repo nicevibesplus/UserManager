@@ -1,12 +1,17 @@
 {
-    "LDAPAdmin": "cn=root,dc=example,dc=com",
-    "LDAPPass": "blutwurst1",
+    "ServerPort": "8443",
 
     "PrivateKey": "privkey.rsa",
     "PublicKey": "pubkey.rsa",
 
+    "SSLCertificate": "/home/specki/go/src/github.com/speckij/UserManager/server.crt",
+    "SSLKeyFile": "/home/specki/go/src/github.com/speckij/UserManager/server.key",
+
     "LDAPserver": "example.com",
     "LDAPPort": "123",
+
+    "LDAPAdmin": "cn=root,dc=example,dc=com",
+    "LDAPPass": "blutwurst1",
 
     "LDAPBaseDN": "dc=example,dc=com",
     "LDAPAdminFilter": "(&(objectClass=organizationalPerson)(memberOf=cn=admins,dc=example,dc=com))"

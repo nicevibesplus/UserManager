@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8; width=device-width; initial-scale=1.0">
+    <link rel="stylesheet" href="static/index.css">
+    <title>fsgi user management</title>
+</head>
+
+<body>
+<header>
+    <div class="headline">User Manager 5000</div>
+</header>
+<div id="info-container">
+    <div id="info" style="display:none"></div>
+</div>
+<form id="form-login" action="api/login" method="POST">
+    <h1>Login as Admin</h1>
+    <input id="username" name="username" type="text" required="" autocomplete="off" placeholder="Username">
+    <input id="password" name="password" type="password" required="" autocomplete="off" placeholder="Password">
+    <input type="submit" value="Login">
+</form>
+
+<form class="box" id="form-addUser" action="api/users/add" method="POST">
+    <h1>Add User</h1>
+    <label for="username">Username:</label>
+    <input id="username" name="username" type="text" required="" autocomplete="off" placeholder="Donald" maxlength="25">
+    <label for="password">Password:</label>
+    <input id="password" name="password" type="password" required="" autocomplete="off" placeholder="Password">
+    <input id="password2" type="password" required="" autocomplete="off" placeholder="Password">
+    <fieldset id="fs">
+        <label for="fs">FS:</label>
+        <input type="radio" name="fs" value="fsgi" required="">fsgi<br>
+        <input type="radio" name="fs" value="fsgelok" required="">fsgelok
+    </fieldset>
+    <input type="submit" value="Add">
+</form>
+
+<form class="box" id="form-addUserToGroup" action="api/users/addToGroup" method="POST">
+    <h1>Add User To Group</h1>
+    <label for="username">Username:</label>
+    <input id="username" name="username" type="text" required="" autocomplete="off" placeholder="Donald" maxlength="250">
+    <label for="group">Groupname:</label>
+    <input id="group" name="group" type="text" required="" autocomplete="off" placeholder="wordpress_fsgi_editors" maxlength="50">
+    <input type="submit" value="Add">
+</form>
+
+<form class="box" id="form-viewUsers" action="api/users/list" method="GET">
+    <h1>List Users</h1>
+    <input type="submit" value="Add">
+</form>
+
+<h6 id="userList"></h6>
+
+<script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="static/index.js"></script>
+</body>
+
+</html>

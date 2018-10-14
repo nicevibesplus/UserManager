@@ -12,17 +12,23 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"crypto/tls"
 )
 
 type config struct {
-	LDAPAdmin       string
-	LDAPPass        string
-	PrivateKey      string
-	PublicKey       string
-	LDAPServer      string
-	LDAPPort        string
-	LDAPBaseDN      string
-	LDAPAdminfilter string
+	ServerPort		 string
+	LDAPAdmin        string
+	LDAPPass         string
+	JWTPrivateRSAKey string
+	JWTPublicRSAKey  string
+	SSLCertificate   string
+	SSLKeyFile       string
+	LDAPServer       string
+	LDAPPort         string
+	LDAPBaseDN       string
+	LDAPAdminfilter  string
+	LDAPUserfilter   string
+	LDAPUserGroups   string
 }
 
 type UserCredentials struct {
@@ -40,16 +46,22 @@ var (
 func main() {
 	ReadConfig()
 	initKeys()
-
 	router := httprouter.New()
-	router.HandlerFunc("POST", "/login", Login)
-	router.Handler("POST", "/users/add", ValidateTokenMiddleware(UsersAdd()))
-	router.Handler("POST", "/users/remove", ValidateTokenMiddleware(UsersRemove()))
-	router.Handler("POST", "/users/removeFromList", ValidateTokenMiddleware(RemoveUserFromGroup()))
-	router.Handler("GET", "/users/list", ValidateTokenMiddleware(UsersList()))
-	router.Handler("POST", "/groups/add", ValidateTokenMiddleware(GroupsAdd()))
-	router.Handler("POST", "/groups/remove", ValidateTokenMiddleware(GroupsRemove()))
-	router.Handler("GET", "/groups/list", ValidateTokenMiddleware(GroupsList()))
+
+	// API
+	router.HandlerFunc("POST", "/api/login", Login)
+	router.Handler("POST", "/api/users/add", ValidateTokenMiddleware(UsersAdd()))
+	router.Handler("POST", "/api/users/remove", ValidateTokenMiddleware(UsersRemove()))
+	router.Handler("POST", "/api/users/removeFromGroup", ValidateTokenMiddleware(RemoveUserFromGroup()))
+	router.Handler("POST", "/api/users/addToGroup", ValidateTokenMiddleware(AddUserToGroup()))
+	router.Handler("GET", "/api/users/list", ValidateTokenMiddleware(UsersList()))
+	router.Handler("POST", "/api/groups/add", ValidateTokenMiddleware(GroupsAdd()))
+	router.Handler("POST", "/api/groups/remove", ValidateTokenMiddleware(GroupsRemove()))
+	router.Handler("GET", "/api/groups/list", ValidateTokenMiddleware(GroupsList()))
+
+	// Frontend
+	router.ServeFiles("/static/*filepath", http.Dir("public/static"))
+	router.Handler("GET", "/", http.FileServer(http.Dir("public")))
 
 	// Set CORS Headers
 	handler := cors.Default().Handler(router)
@@ -58,17 +70,21 @@ func main() {
 		AllowedMethods: []string{"GET", "POST"},
 	})
 
+	srv := &http.Server{
+		Addr:         ":" + configuration.ServerPort,
+		Handler:      c.Handler(handler),
+		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
+	}
+
 	// Start Server.
-	log.Fatal(http.ListenAndServe(":8081", c.Handler(handler)))
+	log.Fatal(srv.ListenAndServeTLS(configuration.SSLCertificate, configuration.SSLKeyFile))
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
-	var user UserCredentials
-	err := json.NewDecoder(r.Body).Decode(&user)
+	err, user := parseUser(r)
 	if err != nil {
-		log.Fatal(err)
 		w.WriteHeader(http.StatusForbidden)
-		fmt.Printf("Error in request", w)
+		fmt.Printf("Error in request", err)
 		return
 	}
 
@@ -100,7 +116,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReadConfig() {
-	file, err := ioutil.ReadFile("config.json")
+	file, err := ioutil.ReadFile("config.conf")
 	Fail(err)
 
 	err = json.Unmarshal(file, &configuration)
@@ -109,13 +125,14 @@ func ReadConfig() {
 
 // Code from http://www.giantflyingsaucer.com/blog/?p=5994
 func initKeys() {
-	signBytes, err := ioutil.ReadFile(configuration.PrivateKey)
+
+	signBytes, err := ioutil.ReadFile(configuration.JWTPrivateRSAKey)
 	Fail(err)
 
 	signKey, err = jwt.ParseRSAPrivateKeyFromPEM(signBytes)
 	Fail(err)
 
-	verifyBytes, err := ioutil.ReadFile(configuration.PublicKey)
+	verifyBytes, err := ioutil.ReadFile(configuration.JWTPublicRSAKey)
 	Fail(err)
 
 	verifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyBytes)
@@ -126,6 +143,10 @@ func ValidateTokenMiddleware(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, err := request.ParseFromRequest(r, request.AuthorizationHeaderExtractor,
 			func(token *jwt.Token) (interface{}, error) {
+				// Don't forget to validate the alg is what you expect:
+				if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+				}
 				return verifyKey, nil
 			})
 

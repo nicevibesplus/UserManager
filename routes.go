@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"fmt"
 	"strings"
-	"encoding/json"
 )
 
 type GroupUser struct {
@@ -17,8 +16,7 @@ func UsersList() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		users, err := LDAPViewUsers()
 		Fail(err)
-		fmt.Println(len(users))
-		userstring := "[\"" + strings.Join(users, "\",\"") + "\"]"
+		userstring := "[" + strings.Join(users, ",") + "]"
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(userstring))
 	})
@@ -27,8 +25,7 @@ func UsersList() http.Handler {
 // UsersAdd Adds the new User to the Database
 func UsersAdd() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var user UserCredentials
-		err := json.NewDecoder(r.Body).Decode(&user)
+		err, user := parseUser(r)
 		if err != nil {
 			w.WriteHeader(400)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
@@ -60,8 +57,7 @@ func UsersAdd() http.Handler {
 // UsersRemove Removes the user with specified dn from the Database
 func UsersRemove() http.Handler{
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var user UserCredentials
-		err := json.NewDecoder(r.Body).Decode(&user)
+		err, user := parseUser(r)
 		if err != nil {
 			w.WriteHeader(400)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
@@ -81,8 +77,7 @@ func UsersRemove() http.Handler{
 // RemoveUserFromGroup Removes a user from group
 func RemoveUserFromGroup() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var user GroupUser
-		err := json.NewDecoder(r.Body).Decode(&user)
+		err, user := parseGroupUser(r)
 		if err != nil {
 			w.WriteHeader(400)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
@@ -96,6 +91,25 @@ func RemoveUserFromGroup() http.Handler {
 		}
 		w.WriteHeader(200)
 	})
+}
+
+func AddUserToGroup() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err, user := parseGroupUser(r)
+		if err != nil {
+			w.WriteHeader(400)
+			w.Write([]byte("Error parsing Request Body: " + err.Error()))
+			return
+		}
+		err = LDAPAddUserToGroup(user.user, user.group)
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte("Error Adding User from Group: " + err.Error()))
+			return
+		}
+		w.WriteHeader(200)
+	})
+
 }
 
 // GroupsList lists all LDAP users
