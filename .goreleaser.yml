@@ -4,21 +4,9 @@ release:
     owner: SpeckiJ
     name: UserManager
   name_template: '{{.Tag}}'
-brew:
-  commit_author:
-    name: goreleaserbot
-    email: goreleaser@carlosbecker.com
-  install: bin.install "UserManager"
 builds:
 - goos:
   - linux
-  - darwin
-  - windows
-  goarch:
-  - amd64
-  - "386"
-  goarm:
-  - "6"
   main: .
   ldflags: -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
   binary: UserManager
@@ -35,6 +23,8 @@ archive:
   - README*
   - changelog*
   - CHANGELOG*
+  - userManager.service
+  - public*
 fpm:
   bindir: /usr/local/bin
 snapshot:
