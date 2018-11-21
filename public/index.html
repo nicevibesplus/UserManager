@@ -1,0 +1,272 @@
+<html>
+	<head>
+    	<meta charset="utf-8"/>
+	    <script src="https://unpkg.com/vue"></script>
+		<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+		<script src="https://unpkg.com/js-sha512@0.8.0/src/sha512.js"></script>
+		<style>
+			body {
+				font-family: "Arial";
+			}
+			
+			div {
+				margin: 10px auto;
+			}
+			
+			#footer {
+				margin-top: 50px;
+				font-size: 10pt;
+				color: #aaa;
+				letter-spacing: 1px;
+			}
+			#footer a {
+				color: #999;
+				text-decoration: none;
+				border-bottom: 1px dotted #999;
+			}
+			
+			h1, h2, h3 {
+				margin-bottom: 3px;
+			}
+		
+			.fsgi td:nth-child(2) {
+				color: blue;
+			}
+			
+			.fsgelok td:nth-child(2) {
+				color: green;
+			}
+			
+			span {
+				
+			}
+			
+			table {
+				border-collapse: collapse;
+			}
+			
+			th, td {
+				padding: 8px 20px;
+			}
+			
+			td:nth-child(odd) {
+				min-width: 20vw;
+			}
+			
+			tr:nth-child(odd) {
+				background-color: #eee;
+			}
+			
+			th {
+				background-color: #999;
+				color: white;
+			}
+		</style>
+	  </head>
+	  <body>
+		<div id="app">
+			<h1>UserManager 5000</h1>
+			
+			<h2>Aktionen</h2>
+			<div>
+				<h3>Login und Datenabruf</h3>
+				<input v-model="admin.username" placeholder="Benutzername">
+				<input v-model="admin.password" placeholder="Passwort" type="password">
+				<button @click="auth()">Einloggen</button>
+				<button @click="retrieveUsers()">User abrufen</button>
+				<button @click="retrieveGroups()">Gruppen abrufen</button>
+			</div>
+			<div>
+				<h3>Neuer Benutzer</h3>
+				<input v-model="newuser.username" placeholder="Benutzername">
+				<input v-model="newuser.password" placeholder="Passwort" type="password">
+				<input v-model="newuser.fs" type="radio" value="fsgi" id="newfsgi"><label for="newfsgi">GI</label>
+				<input v-model="newuser.fs" type="radio" value="fsgelok" id="newfsgelok"><label for="newfsgelok">GeoLök</label>
+				<button @click="addUser(newuser.username, newuser.fs, newuser.password)">Anlegen</button>
+			</div>
+			<div>
+				<h3>Gruppenadministration</h3>
+				<input v-model="newgroup" placeholder="Gruppenname">
+				<button @click="addGroup(newgroup)">Anlegen</button>
+				<button @click="confirm(newgroup + ' wirklich löschen?') && deleteGroup(newgroup)">Löschen</button>
+			</div>
+		
+			<h2>Benutzerliste</h2>
+			<em v-show="users.length == 0">leer</em>
+			<table v-show="users.length != 0">
+				<tr>
+					<th>Name</th>
+					<th>FS</th>
+					<th>Gruppen</th>
+					<th>Aktionen</th>
+				</tr>
+				<tr>
+					<th><input name="name" v-model="search.name" placeholder="Filter"></th>
+					<th><input name="fsgi" id="fsgi" v-model="search.fsgi" type="checkbox"><label for="fsgi">GI</label>
+					<input name="fsgelok" id="fsgelok" v-model="search.fsgelok" type="checkbox"><label for="fsgelok">GeoLök</label></th>
+					<th></th>
+					<th></th>
+				</tr>
+				<tr v-for="user in users" v-bind:class="'fs'+user.fs" v-if="areFiltersMatching(user)">
+					<td>{{ user.displayName }}</td>
+					<td>{{ user.fs == 'gi' ? 'GI' : 'GeoLök' }}</td>
+					<td>
+						<button @click="addUserToGroup(user.displayName, user.fs, prompt('Zu welcher Gruppe? Abbrechen möglich.', 'z.B. wordpress_fsgelok_editors'))">+</button>
+						<span v-for="group in user.groupList" v-if="group != 'fsgi' && group != 'fsgelok'">
+							{{ group }} <button @click="confirm(user.displayName + ' wirklich aus der Gruppe entfernen?') && removeUserFromGroup(user.displayName, user.fs, group)">X</button>
+						</span>
+					</td>
+					<td><button @click="confirm(user.displayName + ' wirklich löschen?') && deleteUser(user.displayName, user.fs)">Löschen</button></td>
+				</tr>
+			</table>
+		  
+			<h2>Gruppenliste</h2>
+			<em v-show="groups.length == 0">leer</em>
+			<ul v-show="groups.length != 0">
+				<li v-for="group in groups">{{ group }}</li>
+			</ul>
+			
+			<div id="footer">
+				<a href="https://specki.xyz/">Specki</a> feat. <a href="http://cfriedrich.de">Christoph</a> &bull;
+				<a href="https://github.com/SpeckiJ/UserManager">Quelltext auf Github</a> &bull;
+				Lizenz: MIT
+			</div>
+		</div>
+		
+		<script>
+			var app = new Vue({
+				el: '#app',
+				data: {
+					admin: {
+						username: '',
+						password: ''
+					},
+					jwt: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1NDA0MDE1MTUsImlhdCI6MTU0MDQwMDkxNX0.k-BGDewUpDW9ErHdDhZvleVy_loqrDwY8WxrRID6PTsuGXISftN5aa3lrBQF0x2z-kBm2SSpT5sRn6tijXHHf3HdFHnCluzBqydg6dQWx0W9oF_KdEF--uPBUlNee61FAGhoMdL3IOVjABp1VU0idbdXZJbP02TWEWa5RlcRqBI',
+					users: [],
+					groups: [],
+					search: {
+						name: '',
+						fsgi: true,
+						fsgelok: true
+					},
+					newuser: {
+						username: '',
+						password: '',
+						fs: undefined
+					},
+					newgroup: ''
+				},
+				methods: {
+					confirm(text) {
+						return confirm(text);
+					},
+					
+					prompt(text, defaultvalue) {
+						return prompt(text, defaultvalue);
+					},
+				
+					auth() {
+						axios.post('https://geofs.uni-muenster.de:8443/api/login', { username: this.admin.username, password: this.admin.password })
+							.then((response) => {
+								console.log('logged in');
+								this.jwt = response.data;
+								axios.defaults.headers.common['Authorization'] = this.jwt;
+							})
+							.catch(function (error) {
+								console.log(error);
+							})
+					},
+					
+					retrieveUsers() {
+						axios.get('https://geofs.uni-muenster.de:8443/api/users/list')
+							.then((response) => {
+								console.log(response);
+								this.users = response.data;
+								this.users.forEach((user) => {
+									user.displayName = user.name.match(/cn=([^,]+)/)[1];
+									user.fs = user.name.match(/o=fs([a-z]+)/)[1];
+									user.groupList = user.groups.split(';').map(groupname => groupname.substr(3));
+								});
+							})
+							  .catch(function (error) {
+								console.log(error);
+							})
+					},
+					
+					addUser(username, fs, password) {
+						if(username != '' && password != '' && ['fsgi', 'fsgelok'].indexOf(fs) != -1) {
+							axios.post('https://geofs.uni-muenster.de:8443/api/users/add', { username: username, fs: fs, password: sha512(password) })
+								.then((response) => {
+									console.log('user added');
+									retrieveUsers();
+								})
+								  .catch(function (error) {
+									console.log(error);
+								})
+						}
+					},
+					
+					deleteUser(username, fs) {
+						axios.post('https://geofs.uni-muenster.de:8443/api/users/remove', { username: username, fs: fs, password: 'dummy' })
+							.then((response) => {
+								console.log('user deleted');
+								retrieveUsers();
+							})
+							.catch(function (error) {
+								console.log(error);
+							})
+					},
+					
+					retrieveGroups() {
+						axios.get('https://geofs.uni-muenster.de:8443/api/groups/list')
+							.then((response) => {
+								console.log(response);
+								this.groups = response.data;
+							})
+							  .catch(function (error) {
+								console.log(error);
+							})
+					},
+					
+					addGroup(groupname) {
+						if(groupname != '') {
+							axios.post('https://geofs.uni-muenster.de:8443/api/groups/add', { groupname: groupname })
+								.then((response) => {
+									console.log('group added');
+									retrieveGroups();
+								})
+								  .catch(function (error) {
+									console.log(error);
+								})
+						}
+					},
+					
+					deleteGroup(groupname) {
+						axios.post('https://geofs.uni-muenster.de:8443/api/groups/remove', { groupname: groupname })
+							.then((response) => {
+								console.log('group deleted');
+								retrieveGroups();
+							})
+							.catch(function (error) {
+								console.log(error);
+							})
+					},
+					
+					addUserToGroup(username, fs, groupname) {
+					
+					},
+					
+					removeUserFromGroup(username, fs, groupname) {
+					
+					},
+					
+					areFiltersMatching(user) {
+						return user.name.toLowerCase().indexOf(this.search.name.toLowerCase()) != -1
+							&& !(user.fs == 'gi' && !this.search.fsgi)
+							&& !(user.fs == 'gelok' && !this.search.fsgelok)
+					}
+				}
+			})
+		</script>
+	</body>
+</html>
