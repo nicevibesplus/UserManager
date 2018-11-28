@@ -26,3 +26,7 @@ type GroupUser struct {
 	User  string `json:"username"`
 	Group string `json:"group"`
 }
+
+type Group struct {
+	Name string `json:"groupname"`
+}

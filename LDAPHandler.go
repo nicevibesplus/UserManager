@@ -89,10 +89,7 @@ func LDAPAddUserToGroup(username, groupname string) error {
 	mr.Add("member", []string{sr[0].DN})
 	err = l.Modify(mr)
 	l.Close()
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func LDAPChangeUserPassword(username, password string) error {
@@ -106,14 +103,11 @@ func LDAPChangeUserPassword(username, password string) error {
 		return errors.New("Invalid Username supplied!")
 	}
 
-	mr := ldap.NewModifyRequest(sr[0].DN);
+	mr := ldap.NewModifyRequest(sr[0].DN)
 	mr.Replace("userPassword", []string{password})
 	err = l.Modify(mr)
 	l.Close()
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func LDAPAddGroup(dn string) error {
@@ -121,13 +115,10 @@ func LDAPAddGroup(dn string) error {
 
 	ar := ldap.NewAddRequest(dn)
 	ar.Attribute("objectclass", []string{"groupOfNames", "top"})
-	l.Add(ar)
+	ar.Attribute("member", []string{""})
 	err := l.Add(ar)
 	l.Close()
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func LDAPRemoveUserFromGroup(dn, group string, l *ldap.Conn) error {
@@ -138,10 +129,7 @@ func LDAPRemoveUserFromGroup(dn, group string, l *ldap.Conn) error {
 	mr := ldap.NewModifyRequest(group)
 	mr.Delete("member", []string{dn})
 	err := l.Modify(mr)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func LDAPDeleteDN(dn string) error {
@@ -150,23 +138,12 @@ func LDAPDeleteDN(dn string) error {
 	dr := ldap.NewDelRequest(dn, []ldap.Control{})
 	err := l.Del(dr)
 	l.Close()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func LDAPDeleteUser(dn string) error {
-	err := LDAPDeleteDN(dn)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func LDAPViewGroups() (groups []string, err error) {
 	result, err := pLDAPSearch(
-		[]string{"cn"},
+		[]string{"cn", "member"},
 		"(objectClass=groupOfNames)",
 	)
 	if err != nil {
@@ -176,7 +153,13 @@ func LDAPViewGroups() (groups []string, err error) {
 	groups = make([]string, len(result))
 	for i := range result {
 		groups[i] = result[i].DN
+		memberList := strings.Join(result[i].GetAttributeValues("member"), ";")
+		strings.Replace(memberList, ","+configuration.LDAPBaseDN, "", -1)
+		groups[i] = "{" + "\"name\": \"" + result[i].DN + "\"," +
+			"\"members\": \"" + memberList + "\"}"
+		groups[i] = strings.Replace(groups[i], ","+configuration.LDAPBaseDN, "", -1)
 	}
+
 	return groups, nil
 }
 

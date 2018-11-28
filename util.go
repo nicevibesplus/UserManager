@@ -58,3 +58,24 @@ func parseGroupUser(r *http.Request) (error, GroupUser) {
 		return errors.New("Error parsing User to struct"), GroupUser{}
 	}
 }
+
+func parseGroup(r *http.Request) (error, string) {
+	if strings.Contains(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
+		r.ParseForm()
+		name := r.PostForm.Get("groupname")
+		if name == "" {
+			return errors.New("error parsing Group name"), ""
+		}
+		return nil, name
+	} else if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		var uc Group
+		decoder := json.NewDecoder(r.Body)
+		decoder.Decode(&uc)
+		if uc.Name == "" {
+			return errors.New("error parsing User to struct"), ""
+		}
+		return nil, uc.Name
+	} else {
+		return errors.New("error parsing User to struct"), ""
+	}
+}

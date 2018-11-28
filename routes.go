@@ -59,7 +59,13 @@ func UsersRemove() http.Handler {
 			return
 		}
 
-		err = LDAPDeleteUser("cn=" + user.Username + ",o=" + user.Fs + "," + configuration.LDAPBaseDN)
+		if user.Username == "admin" {
+			w.WriteHeader(500)
+			w.Write([]byte("Error deleting user: User is protected by divine spirits."))
+			return
+		}
+
+		err = LDAPDeleteDN("cn=" + user.Username + ",o=" + user.Fs + "," + configuration.LDAPBaseDN)
 		if err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte("Error deleting user: " + err.Error()))
@@ -139,18 +145,70 @@ func UsersChangePassword() http.Handler {
 
 // GroupsList lists all LDAP users
 func GroupsList() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		groups, err := LDAPViewGroups()
+		Fail(err)
+		groupstring := "[" + strings.Join(groups, ",") + "]"
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(groupstring))
+	})
 }
 
 // GroupsAdd adds a new group to the LDAP directory
 func GroupsAdd() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err, group := parseGroup(r)
+		if err != nil {
+			w.WriteHeader(400)
+			w.Write([]byte("Error parsing Request Body: " + err.Error()))
+			return
+		}
+
+		// Check if already Registered
+		existing, err := pLDAPSearch(
+			[]string{"dn"},
+			fmt.Sprintf("(&(objectClass=groupOfNames)(cn=%s))", group),
+		)
+		if len(existing) != 0 {
+			// Already exists in LDAP
+			w.WriteHeader(409)
+			w.Write([]byte("Group with given name already exists in LDAP"))
+			return
+		}
+		// Add user to LDAP
+		err = LDAPAddGroup("cn=" + group + "," + configuration.LDAPBaseDN)
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte("Error adding Group: " + err.Error()))
+			return
+		}
+		w.WriteHeader(200)
+	})
 
 }
 
 // GroupsRemove removes a group from the LDAP directory
 // The admin group cannot be removed
 func GroupsRemove() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err, group := parseGroup(r)
+		if err != nil {
+			w.WriteHeader(400)
+			w.Write([]byte("Error parsing Request Body: " + err.Error()))
+			return
+		}
 
+		if group == "admins" {
+			w.WriteHeader(500)
+			w.Write([]byte("Error deleting Group: admin group cannot be deleted"))
+			return
+		}
+		err = LDAPDeleteDN("cn=" + group + "," + configuration.LDAPBaseDN)
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte("Error deleting Group: " + err.Error()))
+			return
+		}
+		w.WriteHeader(200)
+	})
 }
