@@ -20,7 +20,7 @@ func parseUser(r *http.Request) (error, User) {
 		username := r.PostForm.Get("username")
 		password := r.PostForm.Get("password")
 		fs := r.PostForm.Get("fs")
-		if username == "" || password == "" {
+		if username == "" {
 			return errors.New("Error parsing User to struct"), User{}
 		}
 		return nil, User{username, password, fs}
