@@ -1,15 +1,10 @@
 package main
 
 import (
-	"net/http"
 	"fmt"
+	"net/http"
 	"strings"
 )
-
-type GroupUser struct {
-	user string `json:"user"`
-	group string `json:"group"`
-}
 
 // UsersList returns a List of all LDAP Users
 func UsersList() http.Handler {
@@ -35,7 +30,7 @@ func UsersAdd() http.Handler {
 		// Check if already Registered
 		existing, err := pLDAPSearch(
 			[]string{"dn"},
-			fmt.Sprintf("(&(objectClass=organizationalPerson)(cn=%s))",user.Username),
+			fmt.Sprintf("(&(objectClass=organizationalPerson)(cn=%s))", user.Username),
 		)
 		if len(existing) != 0 {
 			// User already exists in LDAP
@@ -44,7 +39,7 @@ func UsersAdd() http.Handler {
 			return
 		}
 		// Add user to LDAP
-		err = LDAPAddUser("cn=" + user.Username + ",o=" + user.Fs + "," + configuration.LDAPBaseDN, user)
+		err = LDAPAddUser("cn="+user.Username+",o="+user.Fs+","+configuration.LDAPBaseDN, user)
 		if err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte("Error adding user: " + err.Error()))
@@ -55,7 +50,7 @@ func UsersAdd() http.Handler {
 }
 
 // UsersRemove Removes the user with specified dn from the Database
-func UsersRemove() http.Handler{
+func UsersRemove() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err, user := parseUser(r)
 		if err != nil {
@@ -83,7 +78,7 @@ func RemoveUserFromGroup() http.Handler {
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
 			return
 		}
-		err = LDAPRemoveUserFromGroup(user.user, user.group, nil)
+		err = LDAPRemoveUserFromGroup(user.User, user.Group, nil)
 		if err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte("Error Removing User from Group: " + err.Error()))
@@ -101,7 +96,7 @@ func AddUserToGroup() http.Handler {
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
 			return
 		}
-		err = LDAPAddUserToGroup(user.user, user.group)
+		err = LDAPAddUserToGroup(user.User, user.Group)
 		if err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte("Error Adding User from Group: " + err.Error()))
@@ -109,7 +104,37 @@ func AddUserToGroup() http.Handler {
 		}
 		w.WriteHeader(200)
 	})
+}
 
+func UsersChangePassword() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err, user := parseUser(r)
+		if err != nil {
+			w.WriteHeader(400)
+			w.Write([]byte("Error parsing Request Body: " + err.Error()))
+			return
+		}
+
+		// Check if already Registered
+		existing, err := pLDAPSearch(
+			[]string{"dn"},
+			fmt.Sprintf("(&(objectClass=organizationalPerson)(cn=%s))", user.Username),
+		)
+		if len(existing) != 1 {
+			// User doesn't exist in LDAP
+			w.WriteHeader(500)
+			w.Write([]byte("User with given Username does not exist in LDAP"))
+			return
+		}
+
+		err = LDAPChangeUserPassword(user.Username, user.Password)
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte("Error changing password: " + err.Error()))
+			return
+		}
+		w.WriteHeader(200)
+	})
 }
 
 // GroupsList lists all LDAP users

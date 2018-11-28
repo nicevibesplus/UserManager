@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rsa"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
@@ -12,35 +13,12 @@ import (
 	"log"
 	"net/http"
 	"time"
-	"crypto/tls"
 )
-
-type config struct {
-	ServerPort		 string
-	LDAPAdmin        string
-	LDAPPass         string
-	JWTPrivateRSAKey string
-	JWTPublicRSAKey  string
-	SSLCertificate   string
-	SSLKeyFile       string
-	LDAPServer       string
-	LDAPPort         string
-	LDAPBaseDN       string
-	LDAPAdminfilter  string
-	LDAPUserfilter   string
-	LDAPUserGroups   string
-}
-
-type UserCredentials struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Fs string `json:"fs"`
-}
 
 var (
 	verifyKey     *rsa.PublicKey
 	signKey       *rsa.PrivateKey
-	configuration config
+	configuration ServerConfig
 )
 
 func main() {
@@ -54,7 +32,9 @@ func main() {
 	router.Handler("POST", "/api/users/remove", ValidateTokenMiddleware(UsersRemove()))
 	router.Handler("POST", "/api/users/removeFromGroup", ValidateTokenMiddleware(RemoveUserFromGroup()))
 	router.Handler("POST", "/api/users/addToGroup", ValidateTokenMiddleware(AddUserToGroup()))
+	router.Handler("POST", "/api/users/changePassword", ValidateTokenMiddleware(UsersChangePassword()))
 	router.Handler("GET", "/api/users/list", ValidateTokenMiddleware(UsersList()))
+
 	router.Handler("POST", "/api/groups/add", ValidateTokenMiddleware(GroupsAdd()))
 	router.Handler("POST", "/api/groups/remove", ValidateTokenMiddleware(GroupsRemove()))
 	router.Handler("GET", "/api/groups/list", ValidateTokenMiddleware(GroupsList()))

@@ -2,11 +2,10 @@ package main
 
 import (
 	"fmt"
-	"gopkg.in/ldap.v2"
 	"github.com/pkg/errors"
+	"gopkg.in/ldap.v2"
 	"strings"
 )
-
 
 func pLDAPConnect() *ldap.Conn {
 	l, err := ldap.Dial("tcp", configuration.LDAPServer+":"+configuration.LDAPPort)
@@ -30,7 +29,7 @@ func pLDAPConnectAdmin() *ldap.Conn {
 	return l
 }
 
-func LDAPAuthenticateAdmin(admin UserCredentials) bool {
+func LDAPAuthenticateAdmin(admin User) bool {
 	// Connect to LDAP
 	l := pLDAPConnectAnon()
 	defer l.Close()
@@ -52,7 +51,7 @@ func LDAPAuthenticateAdmin(admin UserCredentials) bool {
 	return true
 }
 
-func LDAPAddUser(dn string, user UserCredentials) error {
+func LDAPAddUser(dn string, user User) error {
 	l := pLDAPConnectAdmin()
 	// Add User Entry
 	ar := ldap.NewAddRequest(dn)
@@ -67,8 +66,8 @@ func LDAPAddUser(dn string, user UserCredentials) error {
 		return err
 	}
 	// Add User to appropiate Group
-	LDAPAddUserToGroup(dn, user.Fs)
-	return nil
+	err = LDAPAddUserToGroup(user.Username, user.Fs)
+	return err
 }
 
 func LDAPAddUserToGroup(username, groupname string) error {
@@ -84,6 +83,29 @@ func LDAPAddUserToGroup(username, groupname string) error {
 
 	mr := ldap.NewModifyRequest("cn=" + groupname + "," + configuration.LDAPBaseDN)
 	mr.Add("member", []string{sr[0].DN})
+	err = l.Modify(mr)
+	l.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func LDAPChangeUserPassword(username, password string) error {
+	l := pLDAPConnectAdmin()
+
+	// Validate User
+	asdf := fmt.Sprintf(configuration.LDAPUserfilter, username)
+	fmt.Print(asdf)
+	sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPUserfilter, username))
+	Fail(err)
+	if len(sr) != 1 {
+		// User does not exist or too many entries returned
+		return errors.New("Invalid Username supplied!")
+	}
+
+	mr := ldap.NewModifyRequest(sr[0].DN);
+	mr.Replace("userPassword", []string{password})
 	err = l.Modify(mr)
 	l.Close()
 	if err != nil {
@@ -133,22 +155,7 @@ func LDAPDeleteDN(dn string) error {
 }
 
 func LDAPDeleteUser(dn string) error {
-	l := pLDAPConnectAdmin()
-	// Get All Groups
-	groups, err := LDAPViewGroups()
-	if err != nil {
-		return err
-	}
-	// Delete User from all groups
-	for _ , group := range groups  {
-		err := LDAPRemoveUserFromGroup(dn, group, l)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Delete User itself
-	LDAPDeleteDN(dn)
+	err := LDAPDeleteDN(dn)
 	if err != nil {
 		return err
 	}
@@ -165,7 +172,7 @@ func LDAPViewGroups() (groups []string, err error) {
 	}
 
 	groups = make([]string, len(result))
-	for i:= range result {
+	for i := range result {
 		groups[i] = result[i].DN
 	}
 	return groups, nil
@@ -188,8 +195,8 @@ func LDAPViewUsers() (users []string, err error) {
 		groupList = groupList[:len(groupList)-1]
 
 		users[i] = "{" + "\"name\": \"" + result[i].DN + "\"," +
-						 "\"groups\": \"" + groupList + "\"}"
-		users[i] = strings.Replace(users[i], "," + configuration.LDAPBaseDN,"",-1)
+			"\"groups\": \"" + groupList + "\"}"
+		users[i] = strings.Replace(users[i], ","+configuration.LDAPBaseDN, "", -1)
 	}
 
 	return users, nil
