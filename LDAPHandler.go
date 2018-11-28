@@ -53,6 +53,10 @@ func LDAPAuthenticateAdmin(admin User) bool {
 
 func LDAPAddUser(dn string, user User) error {
 	l := pLDAPConnectAdmin()
+	if user.Password == "" {
+		return errors.New("Empty password supplied.")
+	}
+
 	// Add User Entry
 	ar := ldap.NewAddRequest(dn)
 	ar.Attribute("objectclass", []string{"inetOrgPerson", "person", "top", "organizationalPerson"})
@@ -95,8 +99,6 @@ func LDAPChangeUserPassword(username, password string) error {
 	l := pLDAPConnectAdmin()
 
 	// Validate User
-	asdf := fmt.Sprintf(configuration.LDAPUserfilter, username)
-	fmt.Print(asdf)
 	sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPUserfilter, username))
 	Fail(err)
 	if len(sr) != 1 {

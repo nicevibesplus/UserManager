@@ -28,7 +28,7 @@ func parseUser(r *http.Request) (error, User) {
 		var uc User
 		decoder := json.NewDecoder(r.Body)
 		decoder.Decode(&uc)
-		if uc.Username == "" || uc.Password == "" {
+		if uc.Username == "" {
 			return errors.New("Error parsing User to struct"), User{}
 		}
 		return nil, uc
