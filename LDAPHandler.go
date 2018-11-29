@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"github.com/pkg/errors"
 	"gopkg.in/ldap.v2"
@@ -57,14 +59,22 @@ func LDAPAddUser(dn string, user User) error {
 		return errors.New("Empty password supplied.")
 	}
 
+	// Decode hex-encoded SHA512 Hash to Base64 encoding
+	src := make([]byte, hex.DecodedLen(len(user.Password)))
+	_ , err := hex.Decode(src, []byte(user.Password))
+	if err != nil {
+		return err
+	}
+	encoded := base64.StdEncoding.EncodeToString(src)
+
 	// Add User Entry
 	ar := ldap.NewAddRequest(dn)
 	ar.Attribute("objectclass", []string{"inetOrgPerson", "person", "top", "organizationalPerson"})
 	ar.Attribute("cn", []string{user.Username})
 	ar.Attribute("sn", []string{user.Username})
 	ar.Attribute("displayName", []string{user.Username})
-	ar.Attribute("userPassword", []string{user.Password})
-	err := l.Add(ar)
+	ar.Attribute("userPassword", []string{"{SHA512}" + encoded})
+	err = l.Add(ar)
 	l.Close()
 	if err != nil {
 		return err
