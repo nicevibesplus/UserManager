@@ -9,59 +9,71 @@ import (
 	"strings"
 )
 
-func pLDAPConnect() *ldap.Conn {
+func pLDAPConnect() (*ldap.Conn, error) {
 	l, err := ldap.Dial("tcp", configuration.LDAPServer+":"+configuration.LDAPPort)
-	Fail(err)
-	return l
+	return l, err
 }
 
-func pLDAPConnectAnon() *ldap.Conn {
-	l := pLDAPConnect()
+func pLDAPConnectAnon() (*ldap.Conn, error) {
+	l, err := pLDAPConnect()
+	if err != nil {
+		return nil, err
+	}
 	// Bind with anonymous user
-	err := l.Bind("", "")
-	Fail(err)
-	return l
+	err = l.Bind("", "")
+	return l, err
 }
 
-func pLDAPConnectAdmin() *ldap.Conn {
-	l := pLDAPConnect()
+func pLDAPConnectAdmin() (*ldap.Conn, error) {
+	l, err := pLDAPConnect()
+	if err != nil {
+		return nil, err
+	}
 	// Bind with Admin credentials
-	err := l.Bind(configuration.LDAPAdmin, configuration.LDAPPass)
-	Fail(err)
-	return l
+	err = l.Bind(configuration.LDAPAdmin, configuration.LDAPPass)
+	return l, err
 }
 
-func LDAPAuthenticateAdmin(admin User) bool {
+func LDAPAuthenticateAdmin(admin User) (bool, error) {
 	// Connect to LDAP
-	l := pLDAPConnectAnon()
+	l, err := pLDAPConnectAnon()
+	if err != nil {
+		return false, err
+	}
 	defer l.Close()
 
 	sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPAdminfilter, admin.Username))
-	Fail(err)
+	if err != nil {
+		return false, nil
+	}
 
+	// User does not exist or too many entries returned
 	if len(sr) != 1 {
-		return false
-		// User does not exist or too many entries returned
+		return false, nil
 	}
 
 	// Bind as the user to verify their password
 	err = l.Bind(sr[0].DN, admin.Password)
 	if err != nil {
-		return false
+		return false, nil
 		// Wrong password
 	}
-	return true
+	return true, nil
 }
 
 func LDAPAddUser(dn string, user User) error {
-	l := pLDAPConnectAdmin()
+	l, err := pLDAPConnectAdmin()
+	if err != nil {
+		return err
+	}
+
 	if user.Password == "" {
 		return errors.New("Empty password supplied.")
 	}
 
 	// Decode hex-encoded SHA512 Hash to Base64 encoding
 	src := make([]byte, hex.DecodedLen(len(user.Password)))
-	_ , err := hex.Decode(src, []byte(user.Password))
+	_, err = hex.Decode(src, []byte(user.Password))
 	if err != nil {
 		return err
 	}
@@ -85,11 +97,15 @@ func LDAPAddUser(dn string, user User) error {
 }
 
 func LDAPAddUserToGroup(username, groupname string) error {
-	l := pLDAPConnectAdmin()
-
+	l, err := pLDAPConnectAdmin()
+	if err != nil {
+		return err
+	}
 	// Validate User
 	sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPUserfilter, username))
-	Fail(err)
+	if err != nil {
+		return err
+	}
 	if len(sr) != 1 {
 		// User does not exist or too many entries returned
 		return errors.New("Invalid Username supplied!")
@@ -103,11 +119,16 @@ func LDAPAddUserToGroup(username, groupname string) error {
 }
 
 func LDAPChangeUserPassword(username, password string) error {
-	l := pLDAPConnectAdmin()
+	l, err := pLDAPConnectAdmin()
+	if err != nil {
+		return err
+	}
 
 	// Validate User
 	sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPUserfilter, username))
-	Fail(err)
+	if err != nil {
+		return err
+	}
 	if len(sr) != 1 {
 		// User does not exist or too many entries returned
 		return errors.New("Invalid Username supplied!")
@@ -121,32 +142,40 @@ func LDAPChangeUserPassword(username, password string) error {
 }
 
 func LDAPAddGroup(dn string) error {
-	l := pLDAPConnectAdmin()
+	l, err := pLDAPConnectAdmin()
+	if err != nil {
+		return err
+	}
 
 	ar := ldap.NewAddRequest(dn)
 	ar.Attribute("objectclass", []string{"groupOfNames", "top"})
 	ar.Attribute("member", []string{""})
-	err := l.Add(ar)
+	err = l.Add(ar)
 	l.Close()
 	return err
 }
 
-func LDAPRemoveUserFromGroup(dn, group string, l *ldap.Conn) error {
-	if l == nil {
-		l = pLDAPConnectAdmin()
+func LDAPRemoveUserFromGroup(dn, group string) error {
+	conn, err := pLDAPConnectAdmin()
+	if err != nil {
+		return err
 	}
 	// Delete User from Group
+
 	mr := ldap.NewModifyRequest(group)
 	mr.Delete("member", []string{dn})
-	err := l.Modify(mr)
+	err = conn.Modify(mr)
 	return err
 }
 
 func LDAPDeleteDN(dn string) error {
-	l := pLDAPConnectAdmin()
+	l, err := pLDAPConnectAdmin()
+	if err != nil {
+		return err
+	}
 	// Delete Entry
 	dr := ldap.NewDelRequest(dn, []ldap.Control{})
-	err := l.Del(dr)
+	err = l.Del(dr)
 	l.Close()
 	return err
 }
@@ -173,21 +202,25 @@ func LDAPViewGroups() (groups []string, err error) {
 	return groups, nil
 }
 
-func LDAPViewUsers() (users []string, err error) {
+func LDAPViewUsers() ([]string, error) {
 	result, err := pLDAPSearch(
-		[]string{"cn"},
+		[]string{"cn", "memberOf"},
 		"(objectClass=organizationalPerson)",
 	)
-	Fail(err)
-	users = make([]string, len(result))
+	if err != nil {
+		return nil, err
+	}
+	users := make([]string, len(result))
+
 	for i := range result {
-		groups, err := pLDAPSearch([]string{"cn"}, fmt.Sprintf(configuration.LDAPUserGroups, result[i].DN))
-		Fail(err)
 		var groupList = ""
-		for j := range groups {
-			groupList += groups[j].DN + ";"
+		if result[i].Attributes[1] == nil {
+			// Invalid
+			continue
 		}
-		groupList = groupList[:len(groupList)-1]
+		for j := range result[i].Attributes[1].Values {
+			groupList += result[i].Attributes[1].Values[j] + ";"
+		}
 
 		users[i] = "{" + "\"name\": \"" + result[i].DN + "\"," +
 			"\"groups\": \"" + groupList + "\"}"
@@ -198,7 +231,10 @@ func LDAPViewUsers() (users []string, err error) {
 }
 
 func pLDAPSearch(attributes []string, filter string) (result []*ldap.Entry, err error) {
-	l := pLDAPConnectAnon()
+	l, err := pLDAPConnectAnon()
+	if err != nil {
+		return nil, err
+	}
 	defer l.Close()
 
 	// Search for the given username

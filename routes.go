@@ -10,7 +10,11 @@ import (
 func UsersList() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		users, err := LDAPViewUsers()
-		Fail(err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Error occured: " + err.Error()))
+			return
+		}
 		userstring := "[" + strings.Join(users, ",") + "]"
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(userstring))
@@ -22,7 +26,7 @@ func UsersAdd() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err, user := parseUser(r)
 		if err != nil {
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
 			return
 		}
@@ -34,18 +38,18 @@ func UsersAdd() http.Handler {
 		)
 		if len(existing) != 0 {
 			// User already exists in LDAP
-			w.WriteHeader(409)
+			w.WriteHeader(http.StatusConflict)
 			w.Write([]byte("User with given Username already exists in LDAP"))
 			return
 		}
 		// Add user to LDAP
 		err = LDAPAddUser("cn="+user.Username+",o="+user.Fs+","+configuration.LDAPBaseDN, user)
 		if err != nil {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Error adding user: " + err.Error()))
 			return
 		}
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 	})
 }
 
@@ -54,24 +58,24 @@ func UsersRemove() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err, user := parseUser(r)
 		if err != nil {
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
 			return
 		}
 
 		if user.Username == "admin" {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Error deleting user: User is protected by divine spirits."))
 			return
 		}
 
 		err = LDAPDeleteDN("cn=" + user.Username + ",o=" + user.Fs + "," + configuration.LDAPBaseDN)
 		if err != nil {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Error deleting user: " + err.Error()))
 			return
 		}
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 	})
 }
 
@@ -80,17 +84,17 @@ func RemoveUserFromGroup() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err, user := parseGroupUser(r)
 		if err != nil {
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
 			return
 		}
-		err = LDAPRemoveUserFromGroup(user.User, user.Group, nil)
+		err = LDAPRemoveUserFromGroup(user.User, user.Group)
 		if err != nil {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Error Removing User from Group: " + err.Error()))
 			return
 		}
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 	})
 }
 
@@ -98,17 +102,17 @@ func AddUserToGroup() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err, user := parseGroupUser(r)
 		if err != nil {
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
 			return
 		}
 		err = LDAPAddUserToGroup(user.User, user.Group)
 		if err != nil {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Error Adding User from Group: " + err.Error()))
 			return
 		}
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 	})
 }
 
@@ -116,7 +120,7 @@ func UsersChangePassword() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err, user := parseUser(r)
 		if err != nil {
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
 			return
 		}
@@ -128,18 +132,18 @@ func UsersChangePassword() http.Handler {
 		)
 		if len(existing) != 1 {
 			// User doesn't exist in LDAP
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("User with given Username does not exist in LDAP"))
 			return
 		}
 
 		err = LDAPChangeUserPassword(user.Username, user.Password)
 		if err != nil {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Error changing password: " + err.Error()))
 			return
 		}
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 	})
 }
 
@@ -147,7 +151,11 @@ func UsersChangePassword() http.Handler {
 func GroupsList() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		groups, err := LDAPViewGroups()
-		Fail(err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Error occured: " + err.Error()))
+			return
+		}
 		groupstring := "[" + strings.Join(groups, ",") + "]"
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(groupstring))
@@ -159,7 +167,7 @@ func GroupsAdd() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err, group := parseGroup(r)
 		if err != nil {
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
 			return
 		}
@@ -171,18 +179,18 @@ func GroupsAdd() http.Handler {
 		)
 		if len(existing) != 0 {
 			// Already exists in LDAP
-			w.WriteHeader(409)
+			w.WriteHeader(http.StatusConflict)
 			w.Write([]byte("Group with given name already exists in LDAP"))
 			return
 		}
 		// Add user to LDAP
 		err = LDAPAddGroup("cn=" + group + "," + configuration.LDAPBaseDN)
 		if err != nil {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Error adding Group: " + err.Error()))
 			return
 		}
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 	})
 
 }
@@ -193,22 +201,22 @@ func GroupsRemove() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err, group := parseGroup(r)
 		if err != nil {
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
 			return
 		}
 
 		if group == "admins" {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Error deleting Group: admin group cannot be deleted"))
 			return
 		}
 		err = LDAPDeleteDN("cn=" + group + "," + configuration.LDAPBaseDN)
 		if err != nil {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Error deleting Group: " + err.Error()))
 			return
 		}
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 	})
 }

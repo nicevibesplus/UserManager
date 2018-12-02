@@ -3,16 +3,9 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 )
-
-func Fail(err error) {
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-}
 
 func parseUser(r *http.Request) (error, User) {
 	if strings.Contains(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {

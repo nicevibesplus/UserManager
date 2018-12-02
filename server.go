@@ -46,9 +46,12 @@ func main() {
 	// Set CORS Headers
 	handler := cors.Default().Handler(router)
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"GET", "POST"},
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST"},
+		AllowCredentials: true,
+		AllowedHeaders:   []string{"Authorization"},
 	})
+	c = cors.AllowAll()
 
 	srv := &http.Server{
 		Addr:         ":" + configuration.ServerPort,
@@ -69,7 +72,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// LDAP Authentication
-	authenticated := LDAPAuthenticateAdmin(user)
+	authenticated, err := LDAPAuthenticateAdmin(user)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(w, "Error while signing the token")
+		w.Write([]byte("Error occured: " + err.Error()))
+	}
 	if authenticated == false {
 		w.WriteHeader(http.StatusForbidden)
 		w.Write([]byte("Invalid Credentials"))
@@ -88,7 +96,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintln(w, "Error while signing the token")
-		Fail(err)
+		w.Write([]byte("Error occured: " + err.Error()))
+		return
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
@@ -97,25 +106,38 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 func ReadConfig() {
 	file, err := ioutil.ReadFile("config.conf")
-	Fail(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	err = json.Unmarshal(file, &configuration)
-	Fail(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // Code from http://www.giantflyingsaucer.com/blog/?p=5994
 func initKeys() {
 
 	signBytes, err := ioutil.ReadFile(configuration.JWTPrivateRSAKey)
-	Fail(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	signKey, err = jwt.ParseRSAPrivateKeyFromPEM(signBytes)
-	Fail(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	verifyBytes, err := ioutil.ReadFile(configuration.JWTPublicRSAKey)
-	Fail(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	verifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyBytes)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // Code from http://www.giantflyingsaucer.com/blog/?p=5994
