@@ -1,0 +1,300 @@
+openapi: 3.0.0
+servers:
+  - url: 'https://geofs.uni-muenster.de:8443/'
+info:
+  title: geofs User Manager 5000
+  description: API for managing LDAP Users
+  version: 1.0.0
+paths:
+  /api/login:
+    summary: Authenticate User
+    post:
+      tags:
+        - Authentication
+      requestBody:
+        description: User to be authenticated
+        required: true
+        content:
+          application/json:
+            example:
+              username: bilbo_baggins
+              password: XXXXXXXXXXXXXXXX
+              fs: hobbits
+            schema:
+              $ref: '#/components/schemas/UserObject'
+      responses:
+        '200':
+          description: A unique Session Token
+          content:
+            application/json:
+              schema:
+                type: string
+                example: >-
+                  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        '403':
+          description: >-
+            Error authenticating the User against the LDAP Backend. Either
+            Request was malformed or user is not authorized to access this
+            application
+        '500':
+          description: Error authenticating the User agains the LDAP Backend.
+  /api/users/list:
+    summary: Gets a list of all registered users
+    get:
+      tags:
+        - UserManagement
+      responses:
+        '200':
+          description: Gets a list of all registered users
+          content:
+            application/json:
+              schema:
+                type: array
+                title: Userlist
+                items:
+                  $ref: '#/components/schemas/UserListObject'
+        '500':
+          description: Error interacting with the LDAP Backend
+  /api/groups/list:
+    summary: Gets a list of all  groups
+    get:
+      tags:
+        - GroupManagement
+      responses:
+        '200':
+          description: Gets a list of all  groups
+          content:
+            application/json:
+              schema:
+                type: array
+                title: Grouplist
+                items:
+                  $ref: '#/components/schemas/GroupListObject'
+        '500':
+          description: Error interacting with the LDAP Backend
+  /api/users/add:
+    summary: Add new user to LDAP Database
+    post:
+      tags:
+        - UserManagement
+      requestBody:
+        description: Adds the new User to the Database
+        required: true
+        content:
+          application/json:
+            example:
+              username: bilbo_baggins
+              password: XXXXXXXXXXXXXXXX
+              fs: hobbits
+            schema:
+              $ref: '#/components/schemas/UserObject'
+      responses:
+        '200':
+          description: User was sucessfully added
+        '400':
+          description: UserObject was malformed
+        '409':
+          description: User already present in the System
+        '500':
+          description: Error adding user to the LDAP Backend
+  /api/users/remove:
+    summary: Removes user to LDAP Database
+    post:
+      tags:
+        - UserManagement
+      requestBody:
+        description: Adds the new User to the Database
+        required: true
+        content:
+          application/json:
+            example:
+              username: bilbo_baggins
+              password: XXXXXXXXXXXXXXXX
+              fs: hobbits
+            schema:
+              $ref: '#/components/schemas/UserObject'
+      responses:
+        '200':
+          description: User was sucessfully removed
+        '400':
+          description: UserObject was malformed
+        '500':
+          description: Error adding user to the LDAP Backend
+  /api/users/removeFromGroup:
+    summary: Removes user from specified Group
+    post:
+      tags:
+        - UserManagement
+      requestBody:
+        description: Removes user from specified Group
+        required: true
+        content:
+          application/json:
+            example:
+              username: bilbo_baggins
+              group: hobbits
+            schema:
+              $ref: '#/components/schemas/GroupUserObject'
+      responses:
+        '200':
+          description: User was sucessfully removed
+        '400':
+          description: UserObject was malformed
+        '500':
+          description: Error interacting with the LDAP Backend
+  /api/users/addToGroup:
+    summary: Adds user to specified Group
+    post:
+      tags:
+        - UserManagement
+      requestBody:
+        description: Adds user to specified Group
+        required: true
+        content:
+          application/json:
+            example:
+              username: bilbo_baggins
+              group: hobbits
+            schema:
+              $ref: '#/components/schemas/GroupUserObject'
+      responses:
+        '200':
+          description: User was sucessfully added
+        '400':
+          description: UserObject was malformed
+        '500':
+          description: Error interacting with the LDAP Backend
+  /api/users/changePassword:
+    summary: Changes the Password of the specified User
+    post:
+      tags:
+        - UserManagement
+      requestBody:
+        description: Changes the Password of the specified User
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserObject'
+      responses:
+        '200':
+          description: User was sucessfully added
+        '400':
+          description: UserObject was malformed
+        '500':
+          description: Error interacting with the LDAP Backend
+  /api/groups/add:
+    summary: Adds a new Group to the LDAP Backend
+    post:
+      tags:
+        - GroupManagement
+      requestBody:
+        description: Adds a new Group to the LDAP Backend
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupObject'
+      responses:
+        '200':
+          description: User was sucessfully added
+        '400':
+          description: GroupObject was malformed
+        '500':
+          description: Error interacting with the LDAP Backend
+  /api/groups/remove:
+    summary: Removes a new Group from the LDAP Backend
+    post:
+      tags:
+        - GroupManagement
+      requestBody:
+        description: Removes a new Group from the LDAP Backend
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupObject'
+      responses:
+        '200':
+          description: User was sucessfully added
+        '400':
+          description: GroupObject was malformed
+        '500':
+          description: Error interacting with the LDAP Backend
+components:
+  schemas:
+    UserListObject:
+      type: object
+      title: UserListObject
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        groups:
+          type: string
+      required:
+        - name
+        - groups
+      example:
+        name: 'cn=gandalf_the_white,o=heroes'
+        groups: 'cn=wizards,cn=heroes'
+    GroupListObject:
+      type: object
+      title: GroupLListObject
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        members:
+          type: string
+      required:
+        - name
+        - members
+      example:
+        name: cn=heroes
+        members: 'cn=gandalf_the_white,o=heroes,cn=bilbo_baggins,o=heroes'
+    UserObject:
+      type: object
+      title: UserObject
+      additionalProperties: false
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        fs:
+          type: string
+      required:
+        - username
+        - password
+        - fs
+      example:
+        username: bilbo_baggins
+        password: XXXXXXXXXXXXXXXX
+        fs: hobbits
+    GroupUserObject:
+      type: object
+      title: GroupUserObject
+      additionalProperties: false
+      properties:
+        username:
+          type: string
+        group:
+          type: string
+      required:
+        - username
+        - group
+      example:
+        username: bilbo_baggins
+        group: hobbits
+    GroupObject:
+      type: object
+      title: GroupObject
+      additionalProperties: false
+      properties:
+        groupname:
+          type: string
+      required:
+        - groupname
+      example:
+        groupname: wizards
