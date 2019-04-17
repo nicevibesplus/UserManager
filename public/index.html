@@ -67,67 +67,72 @@
 		<div id="app">
 			<h1>UserManager 5000</h1>
 			
-			<h2>Aktionen</h2>
 			<div>
-				<h3>Login und Datenabruf</h3>
+				<h2>Login</h2>
 				<input v-model="admin.username" placeholder="Benutzername">
 				<input v-model="admin.password" placeholder="Passwort" type="password">
 				<button @click="auth()">Einloggen</button>
-				<button @click="retrieveUsers()">User abrufen</button>
-				<button @click="retrieveGroups()">Gruppen abrufen</button>
 			</div>
+		
 			<div>
+				<h2>Benutzer</h2>
+				
 				<h3>Neuer Benutzer</h3>
 				<input v-model="newuser.username" placeholder="Benutzername">
 				<input v-model="newuser.password" placeholder="Passwort" type="password">
 				<input v-model="newuser.fs" type="radio" value="fsgi" id="newfsgi"><label for="newfsgi">GI</label>
 				<input v-model="newuser.fs" type="radio" value="fsgelok" id="newfsgelok"><label for="newfsgelok">GeoLök</label>
 				<button @click="addUser(newuser.username, newuser.fs, newuser.password)">Anlegen</button>
+				
+				<h3>Benutzerliste</h3>
+				<button @click="retrieveUsers()">Benutzerliste aktualisieren</button>
+				<em v-show="users.length == 0">leer</em>
+				<table v-show="users.length != 0">
+					<tr>
+						<th>Name</th>
+						<th>FS</th>
+						<th>Gruppen</th>
+						<th>Aktionen</th>
+					</tr>
+					<tr>
+						<th><input name="name" v-model="search.name" placeholder="Filter"></th>
+						<th><input name="fsgi" id="fsgi" v-model="search.fsgi" type="checkbox"><label for="fsgi">GI</label>
+						<input name="fsgelok" id="fsgelok" v-model="search.fsgelok" type="checkbox"><label for="fsgelok">GeoLök</label></th>
+						<th></th>
+						<th></th>
+					</tr>
+					<tr v-for="user in users" v-bind:class="'fs'+user.fs" v-if="areFiltersMatching(user)">
+						<td>{{ user.displayName }}</td>
+						<td>{{ user.fs == 'gi' ? 'GI' : 'GeoLök' }}</td>
+						<td>
+							<button @click="addUserToGroup(user.displayName, user.fs, prompt('Zu welcher Gruppe? Abbrechen möglich.', 'z.B. wordpress_fsgelok_editors'))">+</button>
+							<span v-for="group in user.groupList" v-if="group != 'fsgi' && group != 'fsgelok'">
+								{{ group }} <button @click="confirm(user.displayName + ' wirklich aus der Gruppe entfernen?') && removeUserFromGroup(user.displayName, user.fs, group)">X</button>
+							</span>
+						</td>
+						<td><button @click="confirm(user.displayName + ' wirklich löschen?') && deleteUser(user.displayName, user.fs)">Löschen</button></td>
+					</tr>
+				</table>
 			</div>
+			
 			<div>
-				<h3>Gruppenadministration</h3>
+				<h2>Gruppen</h2>
+				
+				<h3>Neue Gruppe</h3>
 				<input v-model="newgroup" placeholder="Gruppenname">
 				<button @click="addGroup(newgroup)">Anlegen</button>
 				<button @click="confirm(newgroup + ' wirklich löschen?') && deleteGroup(newgroup)">Löschen</button>
+				
+				<h3>Gruppenliste</h3>
+				<button @click="retrieveGroups()">Gruppenliste aktualisieren</button>
+				<em v-show="groups.length == 0">leer</em>
+				<ul v-show="groups.length != 0">
+					<li v-for="group in groups">{{ group }}</li>
+				</ul>
 			</div>
-		
-			<h2>Benutzerliste</h2>
-			<em v-show="users.length == 0">leer</em>
-			<table v-show="users.length != 0">
-				<tr>
-					<th>Name</th>
-					<th>FS</th>
-					<th>Gruppen</th>
-					<th>Aktionen</th>
-				</tr>
-				<tr>
-					<th><input name="name" v-model="search.name" placeholder="Filter"></th>
-					<th><input name="fsgi" id="fsgi" v-model="search.fsgi" type="checkbox"><label for="fsgi">GI</label>
-					<input name="fsgelok" id="fsgelok" v-model="search.fsgelok" type="checkbox"><label for="fsgelok">GeoLök</label></th>
-					<th></th>
-					<th></th>
-				</tr>
-				<tr v-for="user in users" v-bind:class="'fs'+user.fs" v-if="areFiltersMatching(user)">
-					<td>{{ user.displayName }}</td>
-					<td>{{ user.fs == 'gi' ? 'GI' : 'GeoLök' }}</td>
-					<td>
-						<button @click="addUserToGroup(user.displayName, user.fs, prompt('Zu welcher Gruppe? Abbrechen möglich.', 'z.B. wordpress_fsgelok_editors'))">+</button>
-						<span v-for="group in user.groupList" v-if="group != 'fsgi' && group != 'fsgelok'">
-							{{ group }} <button @click="confirm(user.displayName + ' wirklich aus der Gruppe entfernen?') && removeUserFromGroup(user.displayName, user.fs, group)">X</button>
-						</span>
-					</td>
-					<td><button @click="confirm(user.displayName + ' wirklich löschen?') && deleteUser(user.displayName, user.fs)">Löschen</button></td>
-				</tr>
-			</table>
-			
-			<h2>Gruppenliste</h2>
-			<em v-show="groups.length == 0">leer</em>
-			<ul v-show="groups.length != 0">
-				<li v-for="group in groups">{{ group }}</li>
-			</ul>
-			
+				
 			<div id="footer">
-				<a href="https://specki.xyz/">Specki</a> feat. <a href="http://cfriedrich.de">Christoph</a> &bull;
+				Coded by <a href="https://specki.xyz/">Specki</a> feat. <a href="http://cfriedrich.de">Christoph</a> &bull;
 				<a href="https://github.com/SpeckiJ/UserManager">Quelltext auf Github</a> &bull;
 				Lizenz: MIT
 			</div>
