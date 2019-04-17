@@ -107,24 +107,41 @@ func ReadConfig() {
 	}
 }
 
-// Code from http://www.giantflyingsaucer.com/blog/?p=5994
-func initKeys() {
-
-	signBytes, err := ioutil.ReadFile(configuration.JWTPrivateRSAKey)
+func readCert(path string) (result []byte) {
+	abspath, err := filepath.Abs(path)
 	if err != nil {
 		log.Fatal(err)
 	}
+	result, err = ioutil.ReadFile(abspath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return
+}
 
+// Code from http://www.giantflyingsaucer.com/blog/?p=5994
+func initKeys() {
+	var err error
+
+	if configuration.JWTPrivateRSAKey == "" {
+		err = errors.New("missing config key JWTPrivateRSAKey")
+		log.Print(err)
+	}
+	if configuration.JWTPublicRSAKey == "" {
+		err = errors.New("missing config key JWTPublicRSAkey")
+		log.Print(err)
+	}
+	if err != nil {
+		log.Fatal("incorrect config file")
+	}
+
+	signBytes := readCert(configuration.JWTPrivateRSAKey)
 	signKey, err = jwt.ParseRSAPrivateKeyFromPEM(signBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	verifyBytes, err := ioutil.ReadFile(configuration.JWTPublicRSAKey)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	verifyBytes := readCert(configuration.JWTPublicRSAKey)
 	verifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyBytes)
 	if err != nil {
 		log.Fatal(err)
