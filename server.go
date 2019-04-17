@@ -5,12 +5,14 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/julienschmidt/httprouter"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"path/filepath"
+
+	"github.com/didip/tollbooth"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/julienschmidt/httprouter"
 )
 
 var (
@@ -23,9 +25,10 @@ func main() {
 	readConfig(&configuration)
 	verifyKey, signKey = readJWTKeys(configuration)
 	router := httprouter.New()
+	ratelimiter := tollbooth.NewLimiter(0.2, nil) // allow one request every 5 seconds per IP
 
 	// API
-	router.HandlerFunc("POST", "/api/login", Login)
+	router.Handler("POST", "/api/login", tollbooth.LimitFuncHandler(ratelimiter, Login))
 	router.Handler("POST", "/api/users/add", ValidateTokenMiddleware(UsersAdd()))
 	router.Handler("POST", "/api/users/remove", ValidateTokenMiddleware(UsersRemove()))
 	router.Handler("POST", "/api/users/removeFromGroup", ValidateTokenMiddleware(RemoveUserFromGroup()))
