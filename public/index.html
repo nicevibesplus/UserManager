@@ -74,7 +74,7 @@
 				<button @click="auth()">Einloggen</button>
 			</div>
 		
-			<div>
+			<div v-if="isLoggedIn">
 				<h2>Benutzer</h2>
 				
 				<h3>Neuer Benutzer</h3>
@@ -115,7 +115,7 @@
 				</table>
 			</div>
 			
-			<div>
+			<div v-if="isLoggedIn">
 				<h2>Gruppen</h2>
 				
 				<h3>Neue Gruppe</h3>
@@ -146,7 +146,8 @@
 						username: '',
 						password: ''
 					},
-					jwt: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1NDA0MDE1MTUsImlhdCI6MTU0MDQwMDkxNX0.k-BGDewUpDW9ErHdDhZvleVy_loqrDwY8WxrRID6PTsuGXISftN5aa3lrBQF0x2z-kBm2SSpT5sRn6tijXHHf3HdFHnCluzBqydg6dQWx0W9oF_KdEF--uPBUlNee61FAGhoMdL3IOVjABp1VU0idbdXZJbP02TWEWa5RlcRqBI',
+					jwt: '',
+					isLoggedIn: false,
 					users: [],
 					groups: [],
 					search: {
@@ -174,8 +175,11 @@
 						axios.post('https://geofs.uni-muenster.de:8443/api/login', { username: this.admin.username, password: this.admin.password })
 							.then((response) => {
 								console.log('logged in');
+								this.isLoggedIn = true;
 								this.jwt = response.data;
 								axios.defaults.headers.common['Authorization'] = this.jwt;
+								this.retrieveUsers();
+								this.retrieveGroups();
 							})
 							.catch(function (error) {
 								console.log(error);
