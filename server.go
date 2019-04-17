@@ -4,14 +4,15 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
 	"github.com/julienschmidt/httprouter"
-	"github.com/rs/cors"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"path/filepath"
 	"time"
 )
 
@@ -43,19 +44,9 @@ func main() {
 	router.ServeFiles("/static/*filepath", http.Dir("public/static"))
 	router.Handler("GET", "/", http.FileServer(http.Dir("public")))
 
-	// Set CORS Headers
-	handler := cors.Default().Handler(router)
-	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST"},
-		AllowCredentials: true,
-		AllowedHeaders:   []string{"Authorization"},
-	})
-	c = cors.AllowAll()
-
 	srv := &http.Server{
 		Addr:         ":" + configuration.ServerPort,
-		Handler:      c.Handler(handler),
+		Handler:      router,
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}
 
