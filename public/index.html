@@ -127,7 +127,10 @@
 				<button @click="retrieveGroups()">Gruppenliste aktualisieren</button>
 				<em v-show="groups.length == 0">leer</em>
 				<ul v-show="groups.length != 0">
-					<li v-for="group in groups">{{ group }}</li>
+					<li v-for="group in groups">
+						<strong>{{ group.name.replace('cn=', '') }}:</strong>
+						{{group.members.replace(/cn=|,o=fsg(i|elok)/g, '').split(';').join(', ')}}
+					</li>
 				</ul>
 			</div>
 				
