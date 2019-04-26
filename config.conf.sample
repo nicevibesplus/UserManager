@@ -1,11 +1,11 @@
 {
     "ServerPort": "8443",
 
-    "PrivateKey": "privkey.rsa",
-    "PublicKey": "pubkey.rsa",
+    "JWTPrivateRSAKey": "./keys/jwt.key",
+    "JWTPublicRSAKey": "./keys/jwt.pub",
 
-    "SSLCertificate": "/home/specki/go/src/github.com/speckij/UserManager/server.crt",
-    "SSLKeyFile": "/home/specki/go/src/github.com/speckij/UserManager/server.key",
+    "SSLCertificate": "./keys/tls.crt",
+    "SSLKeyFile": "./keys/tls.key",
 
     "LDAPserver": "example.com",
     "LDAPPort": "123",

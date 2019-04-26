@@ -4,7 +4,80 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go/request"
 )
+
+func Login(w http.ResponseWriter, r *http.Request) {
+	err, user := parseUser(r)
+	if err != nil {
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Printf("Error in request", err)
+		return
+	}
+
+	// LDAP Authentication
+	authenticated, err := LDAPAuthenticateAdmin(user)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(w, "Error while signing the token")
+		w.Write([]byte("Error occured: " + err.Error()))
+	}
+	if authenticated == false {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Invalid Credentials"))
+		return
+	}
+
+	token := jwt.New(jwt.SigningMethodRS256)
+	claims := make(jwt.MapClaims)
+
+	claims["exp"] = time.Now().Add(time.Minute * time.Duration(10)).Unix()
+	claims["iat"] = time.Now().Unix()
+	token.Claims = claims
+
+	tokenString, err := token.SignedString(signKey)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(w, "Error while signing the token")
+		w.Write([]byte("Error occured: " + err.Error()))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(tokenString))
+}
+
+// Code from http://www.giantflyingsaucer.com/blog/?p=5994
+func ValidateTokenMiddleware(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token, err := request.ParseFromRequest(r, request.AuthorizationHeaderExtractor,
+			func(token *jwt.Token) (interface{}, error) {
+				// Don't forget to validate the alg is what you expect:
+				if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+				}
+				return verifyKey, nil
+			})
+
+		if err == nil {
+			if token.Valid {
+				handler.ServeHTTP(w, r)
+			} else {
+				w.WriteHeader(http.StatusUnauthorized)
+				fmt.Fprint(w, "Token is not valid")
+				return
+			}
+		} else {
+			w.WriteHeader(http.StatusUnauthorized)
+			fmt.Fprint(w, "Unauthorized access to this resource")
+			return
+		}
+	})
+}
 
 // UsersList returns a List of all LDAP Users
 func UsersList() http.Handler {
