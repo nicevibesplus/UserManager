@@ -221,6 +221,7 @@ func LDAPViewUsers() ([]string, error) {
 		for j := range result[i].Attributes[1].Values {
 			groupList += result[i].Attributes[1].Values[j] + ";"
 		}
+		groupList = groupList[:len(groupList) - 1] // remove trailing `;`
 
 		users[i] = "{" + "\"name\": \"" + result[i].DN + "\"," +
 			"\"groups\": \"" + groupList + "\"}"
