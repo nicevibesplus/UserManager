@@ -2,7 +2,6 @@
 	<head>
 		<meta charset="utf-8"/>
 		<script src="https://unpkg.com/vue"></script>
-		<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 		<script src="https://unpkg.com/js-sha512@0.8.0/src/sha512.js"></script>
 		<style>
 			body {
@@ -182,112 +181,138 @@
 					},
 
 					auth() {
-						axios.post(`${API_BASE}/login`, { username: this.admin.username, password: this.admin.password })
+						this.requestApi('/login', { username: this.admin.username, password: this.admin.password })
 							.then((response) => {
+								this.jwt = response;
 								this.isLoggedIn = true;
-								this.jwt = response.data;
-								axios.defaults.headers.common['Authorization'] = this.jwt;
 								this.retrieveUsers();
 								this.retrieveGroups();
 							})
 							.catch(function (error) {
 								alert('Unable to log in, see console for details.');
-								console.log(error);
+								console.error(error);
 							})
 					},
 
 					retrieveUsers() {
-						axios.get(`${API_BASE}/users/list`)
+						this.requestApi('/users/list')
 							.then((response) => {
-								this.users = response.data;
+								this.users = response;
 								this.users.forEach((user) => {
 									user.displayName = user.name.match(/cn=([^,]+)/)[1];
 									user.fs = `fs${user.name.match(/o=fs([a-z]+)/)[1]}`; // extract first group with fs prefix
 									user.groupList = user.groups.split(';').map(groupname => groupname.substr(3));
 								});
 							})
-								.catch(function (error) {
+							.catch(function (error) {
 								alert('Unable to retrieve users, see console for details.');
-								console.log(error);
+								console.error(error);
 							})
 					},
 
-					addUser(username, fs, password) {
-						if(username != '' && password != '' && ['fsgi', 'fsgelok'].indexOf(fs) != -1) {
-							axios.post(`${API_BASE}/users/add`, { username: username, fs: fs, password: sha512(password) })
+					addUser(username, fs, pass) {
+						if(username != '' && pass != '' && ['fsgi', 'fsgelok'].indexOf(fs) != -1) {
+							const password = sha512(pass);
+							this.requestApi('/users/add', { username, fs, password })
 								.then((response) => {
 									alert('User successfully added');
 									this.retrieveUsers();
 								})
-									.catch(function (error) {
+								.catch(function (error) {
 									alert('Unable to add user, see console for details.');
-									console.log(error);
+									console.error(error);
 								})
 						}
 					},
 
 					deleteUser(username, fs) {
-						axios.post(`${API_BASE}/users/remove`, { username: username, fs: fs })
+						this.requestApi('/users/remove', { username: username, fs: fs })
 							.then((response) => {
 								alert('User successfully deleted');
 								this.retrieveUsers();
 							})
 							.catch(function (error) {
 								alert('Unable to delete user, see console for details.');
-								console.log(error);
+								console.error(error);
 							})
 					},
 
 					retrieveGroups() {
-						axios.get(`${API_BASE}/groups/list`)
+						this.requestApi('/groups/list')
 							.then((response) => {
-								this.groups = response.data;
+								this.groups = response;
 							})
 								.catch(function (error) {
 								alert('Unable to retrieve groups, see console for details.');
-								console.log(error);
+								console.error(error);
 							})
 					},
 
 					addGroup(groupname) {
 						if(groupname != '') {
-							axios.post(`${API_BASE}/groups/add`, { groupname: groupname })
+							this.requestApi('/groups/add', { groupname: groupname })
 								.then((response) => {
 									alert('Group successfully added');
 									retrieveGroups();
 								})
-									.catch(function (error) {
+								.catch(function (error) {
 									alert('Unable to add group, see console for details.');
-									console.log(error);
+									console.error(error);
 								})
 						}
 					},
 
 					deleteGroup(groupname) {
-						axios.post(`${API_BASE}/groups/remove`, { groupname: groupname })
+						this.requestApi('/groups/remove', { groupname: groupname })
 							.then((response) => {
 								alert('Group successfully deleted');
 								retrieveGroups();
 							})
 							.catch(function (error) {
 								alert('Unable to delete group, see console for details.');
-								console.log(error);
+								console.error(error);
 							})
 					},
-					
+
 					addUserToGroup(username, fs, groupname) {
-					
+
 					},
-					
+
 					removeUserFromGroup(username, fs, groupname) {
-					
+
 					},
-					
+
 					areFiltersMatching(user) {
 						return user.name.toLowerCase().indexOf(this.search.name.toLowerCase()) != -1
 							&& !(user.fs == 'gi' && !this.search.fsgi)
 							&& !(user.fs == 'gelok' && !this.search.fsgelok)
-					}
+					},
+
+					async requestApi (apiRoute, body = undefined) {
+						const url = `${API_BASE}${apiRoute}`;
+						const params = {
+							headers: {
+								'Authorization': this.jwt,
+								'Content-Type': 'application/json',
+							},
+						};
+
+						if (body)
+							Object.assign(params, { method: 'POST', body: JSON.stringify(body) });
+
+						const res = await fetch(url, params);
+						const data = await res.text();
+
+						if (!res.ok)
+							throw new Error(`Request to ${url} failed with status ${res.status} ${res.statusText}:\n${data}`);
+
+						try {
+							return JSON.parse(data);
+						} catch(e) {
+							return data;
+						}
+					},
+
 				}
 			})
 		</script>
