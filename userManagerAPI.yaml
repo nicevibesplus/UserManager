@@ -103,7 +103,7 @@ paths:
       tags:
         - UserManagement
       requestBody:
-        description: Adds the new User to the Database
+        description: Removes a user from the Database
         required: true
         content:
           application/json:
@@ -119,7 +119,7 @@ paths:
         '400':
           description: UserObject was malformed
         '500':
-          description: Error adding user to the LDAP Backend
+          description: Error removing user from the LDAP Backend
   /api/users/removeFromGroup:
     summary: Removes user from specified Group
     post:
