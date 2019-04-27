@@ -69,21 +69,24 @@
 			
 			<div>
 				<h2>Login</h2>
-				<input v-model="admin.username" placeholder="Benutzername">
-				<input v-model="admin.password" placeholder="Passwort" type="password">
-				<button @click="auth()">Einloggen</button>
+				<form @submit.prevent="auth()">
+					<input v-model="admin.username" placeholder="Benutzername"/>
+					<input v-model="admin.password" placeholder="Passwort" type="password"/>
+					<input type="submit" value="Einloggen"/>
+				</form>
 			</div>
 		
 			<div v-if="isLoggedIn">
 				<h2>Benutzer</h2>
 				
 				<h3>Neuer Benutzer</h3>
-				<input v-model="newuser.username" placeholder="Benutzername">
-				<input v-model="newuser.password" placeholder="Passwort" type="password">
-				<input v-model="newuser.fs" type="radio" value="fsgi" id="newfsgi"><label for="newfsgi">GI</label>
-				<input v-model="newuser.fs" type="radio" value="fsgelok" id="newfsgelok"><label for="newfsgelok">GeoLök</label>
-				<button @click="addUser(newuser.username, newuser.fs, newuser.password)">Anlegen</button>
-				
+				<form @submit.prevent="addUser(newuser.username, newuser.fs, newuser.password)">
+					<input required v-model="newuser.username" placeholder="Benutzername"/>
+					<input required v-model="newuser.password" placeholder="Passwort" type="password"/>
+					<input required v-model="newuser.fs" type="radio" name="fs" value="fsgi" id="newfsgi"/><label for="newfsgi">GI</label>
+					<input required v-model="newuser.fs" type="radio" name="fs" value="fsgelok" id="newfsgelok"/><label for="newfsgelok">GeoLök</label>
+					<input type="submit" value="Anlegen"/>
+				</form>
 				<h3>Benutzerliste</h3>
 				<button @click="retrieveUsers()">Benutzerliste aktualisieren</button>
 				<em v-show="users.length == 0">leer</em>
