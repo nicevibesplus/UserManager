@@ -145,7 +145,10 @@
 		</div>
 		
 		<script>
-			var app = new Vue({
+			// const API_BASE = 'https://geofs.uni-muenster.de:8443/api' // development only
+			const API_BASE = './api'
+
+			const app = new Vue({
 				el: '#app',
 				data: {
 					admin: {
@@ -172,13 +175,13 @@
 					confirm(text) {
 						return confirm(text);
 					},
-					
+
 					prompt(text, defaultvalue) {
 						return prompt(text, defaultvalue);
 					},
-				
+
 					auth() {
-						axios.post('https://geofs.uni-muenster.de:8443/api/login', { username: this.admin.username, password: this.admin.password })
+						axios.post(`${API_BASE}/login`, { username: this.admin.username, password: this.admin.password })
 							.then((response) => {
 								this.isLoggedIn = true;
 								this.jwt = response.data;
@@ -191,9 +194,9 @@
 								console.log(error);
 							})
 					},
-					
+
 					retrieveUsers() {
-						axios.get('https://geofs.uni-muenster.de:8443/api/users/list')
+						axios.get(`${API_BASE}/users/list`)
 							.then((response) => {
 								this.users = response.data;
 								this.users.forEach((user) => {
@@ -207,10 +210,10 @@
 								console.log(error);
 							})
 					},
-					
+
 					addUser(username, fs, password) {
 						if(username != '' && password != '' && ['fsgi', 'fsgelok'].indexOf(fs) != -1) {
-							axios.post('https://geofs.uni-muenster.de:8443/api/users/add', { username: username, fs: fs, password: sha512(password) })
+							axios.post(`${API_BASE}/users/add`, { username: username, fs: fs, password: sha512(password) })
 								.then((response) => {
 									alert('User successfully added');
 									retrieveUsers();
@@ -221,9 +224,9 @@
 								})
 						}
 					},
-					
+
 					deleteUser(username, fs) {
-						axios.post('https://geofs.uni-muenster.de:8443/api/users/remove', { username: username, fs: fs })
+						axios.post(`${API_BASE}/users/remove`, { username: username, fs: fs })
 							.then((response) => {
 								alert('User successfully deleted');
 								retrieveUsers();
@@ -233,9 +236,9 @@
 								console.log(error);
 							})
 					},
-					
+
 					retrieveGroups() {
-						axios.get('https://geofs.uni-muenster.de:8443/api/groups/list')
+						axios.get(`${API_BASE}/groups/list`)
 							.then((response) => {
 								this.groups = response.data;
 							})
@@ -244,10 +247,10 @@
 								console.log(error);
 							})
 					},
-					
+
 					addGroup(groupname) {
 						if(groupname != '') {
-							axios.post('https://geofs.uni-muenster.de:8443/api/groups/add', { groupname: groupname })
+							axios.post(`${API_BASE}/groups/add`, { groupname: groupname })
 								.then((response) => {
 									alert('Group successfully added');
 									retrieveGroups();
@@ -258,9 +261,9 @@
 								})
 						}
 					},
-					
+
 					deleteGroup(groupname) {
-						axios.post('https://geofs.uni-muenster.de:8443/api/groups/remove', { groupname: groupname })
+						axios.post(`${API_BASE}/groups/remove`, { groupname: groupname })
 							.then((response) => {
 								alert('Group successfully deleted');
 								retrieveGroups();
