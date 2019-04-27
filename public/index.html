@@ -220,7 +220,7 @@
 					},
 					
 					deleteUser(username, fs) {
-						axios.post('https://geofs.uni-muenster.de:8443/api/users/remove', { username: username, fs: fs, password: 'dummy' })
+						axios.post('https://geofs.uni-muenster.de:8443/api/users/remove', { username: username, fs: fs })
 							.then((response) => {
 								alert('User successfully deleted');
 								retrieveUsers();
