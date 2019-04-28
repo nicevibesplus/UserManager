@@ -290,7 +290,7 @@
 					removeUserFromGroup(username, groupname) {
 						this.requestApi('/users/removeFromGroup', { username, groupname })
 							.then((response) => {
-								alert('Group successfully added');
+								alert('Group successfully removed');
 								this.retrieveUsers();
 								this.retrieveGroups();
 							})
