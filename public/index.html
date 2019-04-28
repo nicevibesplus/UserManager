@@ -7,11 +7,23 @@
 			body {
 				font-family: "Arial";
 			}
-			
+
 			div {
 				margin: 10px auto;
 			}
-			
+
+			.alert {
+				width: 100%;
+				border: 1px solid black;
+				padding: 10px;
+			}
+			.error {
+				background: #ef5a43;
+			}
+			.success {
+				background: lightblue;
+			}
+
 			#footer {
 				margin-top: 50px;
 				font-size: 10pt;
@@ -23,39 +35,35 @@
 				text-decoration: none;
 				border-bottom: 1px dotted #999;
 			}
-			
+
 			h1, h2, h3 {
 				margin-bottom: 3px;
 			}
-		
+
 			.fsgi td:nth-child(2) {
 				color: blue;
 			}
-			
+
 			.fsgelok td:nth-child(2) {
 				color: green;
 			}
-			
-			span {
-				
-			}
-			
+
 			table {
 				border-collapse: collapse;
 			}
-			
+
 			th, td {
 				padding: 8px 20px;
 			}
-			
+
 			td:nth-child(odd) {
 				min-width: 20vw;
 			}
-			
+
 			tr:nth-child(odd) {
 				background-color: #eee;
 			}
-			
+
 			th {
 				background-color: #999;
 				color: white;
@@ -65,7 +73,12 @@
 		<body>
 		<div id="app">
 			<h1>UserManager 5000</h1>
-			
+
+			<div class="alert" :class="statusType" v-if="statusMsg">
+				{{ statusType === 'success' ? '🛈' : '⚠' }}
+				{{ statusMsg }}
+			</div>
+
 			<div>
 				<h2>Login</h2>
 				<form @submit.prevent="auth()">
@@ -74,10 +87,10 @@
 					<input type="submit" value="Einloggen"/>
 				</form>
 			</div>
-		
+
 			<div v-if="isLoggedIn">
 				<h2>Benutzer</h2>
-				
+
 				<h3>Neuer Benutzer</h3>
 				<form @submit.prevent="addUser(newuser.username, newuser.fs, newuser.password)">
 					<input required v-model="newuser.username" placeholder="Benutzername"/>
@@ -117,15 +130,15 @@
 					</tr>
 				</table>
 			</div>
-			
+
 			<div v-if="isLoggedIn">
 				<h2>Gruppen</h2>
-				
+
 				<h3>Neue Gruppe</h3>
 				<input v-model="newgroup" placeholder="Gruppenname">
 				<button @click="addGroup(newgroup)">Anlegen</button>
 				<button @click="confirm(newgroup + ' wirklich löschen?') && deleteGroup(newgroup)">Löschen</button>
-				
+
 				<h3>Gruppenliste</h3>
 				<button @click="retrieveGroups()">Gruppenliste aktualisieren</button>
 				<em v-show="groups.length == 0">leer</em>
@@ -136,14 +149,14 @@
 					</li>
 				</ul>
 			</div>
-				
+
 			<div id="footer">
 				Coded by <a href="https://specki.xyz/">Specki</a> feat. <a href="http://cfriedrich.de">Christoph</a> &bull;
 				<a href="https://github.com/SpeckiJ/UserManager">Quelltext auf Github</a> &bull;
 				Lizenz: MIT
 			</div>
 		</div>
-		
+
 		<script>
 			// const API_BASE = 'https://geofs.uni-muenster.de:8443/api' // development only
 			const API_BASE = './api'
@@ -169,7 +182,9 @@
 						password: '',
 						fs: undefined
 					},
-					newgroup: ''
+					newgroup: '',
+					statusMsg: '',
+					statusType: 'success',
 				},
 				methods: {
 					confirm(text) {
@@ -187,10 +202,10 @@
 								this.isLoggedIn = true;
 								this.retrieveUsers();
 								this.retrieveGroups();
+								this.notify(); // reset possible error message
 							})
-							.catch(function (error) {
-								alert('Unable to log in, see console for details.');
-								console.error(error);
+							.catch(err => {
+								this.notify(`Unable to log in: ${err}`, 'error');
 							})
 					},
 
@@ -204,9 +219,8 @@
 									user.groupList = user.groups.split(';').map(groupname => groupname.substr(3));
 								});
 							})
-							.catch(function (error) {
-								alert('Unable to retrieve users, see console for details.');
-								console.error(error);
+							.catch(err => {
+								this.notify(`Unable to retrieve users: ${err}`, 'error');
 							})
 					},
 
@@ -215,12 +229,11 @@
 							const password = sha512(pass);
 							this.requestApi('/users/add', { username, fs, password })
 								.then((response) => {
-									alert('User successfully added');
+									this.notify('User successfully added')
 									this.retrieveUsers();
 								})
-								.catch(function (error) {
-									alert('Unable to add user, see console for details.');
-									console.error(error);
+								.catch(err => {
+									this.notify(`Unable to add user: ${err}`, 'error');
 								})
 						}
 					},
@@ -228,12 +241,11 @@
 					deleteUser(username) {
 						this.requestApi('/users/remove', { username })
 							.then((response) => {
-								alert('User successfully deleted');
+								this.notify('User successfully deleted')
 								this.retrieveUsers();
 							})
-							.catch(function (error) {
-								alert('Unable to delete user, see console for details.');
-								console.error(error);
+							.catch(err => {
+								this.notify(`Unable to delete user: ${err}`, 'error');
 							})
 					},
 
@@ -242,9 +254,8 @@
 							.then((response) => {
 								this.groups = response;
 							})
-								.catch(function (error) {
-								alert('Unable to retrieve groups, see console for details.');
-								console.error(error);
+							.catch(err => {
+								this.notify(`Unable to retrieve groups: ${err}`, 'error');
 							})
 					},
 
@@ -252,12 +263,11 @@
 						if(groupname != '') {
 							this.requestApi('/groups/add', { groupname })
 								.then((response) => {
-									alert('Group successfully added');
+									this.notify('Group successfully added');
 									this.retrieveGroups();
 								})
-								.catch(function (error) {
-									alert('Unable to add group, see console for details.');
-									console.error(error);
+								.catch(err => {
+									this.notify(`Unable to add group: ${err}`, 'error');
 								})
 						}
 					},
@@ -265,38 +275,35 @@
 					deleteGroup(groupname) {
 						this.requestApi('/groups/remove', { groupname })
 							.then((response) => {
-								alert('Group successfully deleted');
+								this.notify('Group successfully deleted');
 								this.retrieveGroups();
 							})
-							.catch(function (error) {
-								alert('Unable to delete group, see console for details.');
-								console.error(error);
+							.catch(err => {
+								this.notify(`Unable to delete group: ${err}`, 'error');
 							})
 					},
 
 					addUserToGroup(username, groupname) {
 						this.requestApi('/users/addToGroup', { username, groupname })
 							.then((response) => {
-								alert('Group successfully added');
+								this.notify('Group successfully added');
 								this.retrieveUsers();
 								this.retrieveGroups();
 							})
-							.catch(function (error) {
-								alert('Unable to add user to group, see console for details.');
-								console.error(error);
+							.catch(err => {
+								this.notify(`Unable to add user to group: ${err}`, 'error');
 							})
 					},
 
 					removeUserFromGroup(username, groupname) {
 						this.requestApi('/users/removeFromGroup', { username, groupname })
 							.then((response) => {
-								alert('Group successfully removed');
+								this.notify('Group successfully removed');
 								this.retrieveUsers();
 								this.retrieveGroups();
 							})
-							.catch(function (error) {
-								alert('Unable to remove user from group, see console for details.');
-								console.error(error);
+							.catch(err => {
+								this.notify(`Unable to remove user from group: ${err}`, 'error');
 							})
 					},
 
@@ -329,6 +336,11 @@
 						} catch(e) {
 							return data;
 						}
+					},
+
+					notify (message, type = 'success') {
+						this.statusMsg = message;
+						this.statusType = type;
 					},
 
 				}
