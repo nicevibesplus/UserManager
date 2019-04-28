@@ -1,7 +1,9 @@
 #!/bin/bash
+set -e
 
 # This script will build the binary and upload it together with the frontend
-# and restart the service
+# and restart the service.
+# NOTE: this does not a full deployment, and assumes config and keys are already provided!
 # Dependencies: bash, git, ssh
 
 if [ ! -z "$(git status --untracked-files=no --porcelain)" ]; then
@@ -26,4 +28,3 @@ scp public/index.html $userHost:$targetDir/public/
 echo "unleashing your latest creation.."
 ssh $userHost 'ln -sf $targetBinary $targetDir/userManager'
 ssh $userHost 'systemctl restart userManager'
-
