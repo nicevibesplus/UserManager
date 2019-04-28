@@ -107,10 +107,10 @@
 						<td>{{ user.displayName }}</td>
 						<td>{{ user.fs == 'fsgi' ? 'GI' : 'GeoLök' }}</td>
 						<td>
-							<button @click="addUserToGroup(user.displayName, user.fs, prompt('Zu welcher Gruppe? Abbrechen möglich.', 'z.B. wordpress_fsgelok_editors'))">+</button>
+							<button @click="addUserToGroup(user.displayName, prompt('Zu welcher Gruppe? Abbrechen möglich.', 'z.B. wordpress_fsgelok_editors'))">+</button>
 							<span v-for="group in user.groupList" v-if="group != 'fsgi' && group != 'fsgelok'">
 								{{ group }}
-								<button @click="confirm(user.displayName + ' wirklich aus der Gruppe entfernen?') && removeUserFromGroup(user.displayName, user.fs, group)">X</button>
+								<button @click="confirm(user.displayName + ' wirklich aus der Gruppe ' + group + ' entfernen?') && removeUserFromGroup(user.displayName, group)">X</button>
 							</span>
 						</td>
 						<td><button @click="confirm(user.displayName + ' wirklich löschen?') && deleteUser(user.displayName, user.fs)">Löschen</button></td>
@@ -274,12 +274,30 @@
 							})
 					},
 
-					addUserToGroup(username, fs, groupname) {
-
+					addUserToGroup(username, group) {
+						this.requestApi('/users/addToGroup', { username, group })
+							.then((response) => {
+								alert('Group successfully added');
+								this.retrieveUsers();
+								this.retrieveGroups();
+							})
+							.catch(function (error) {
+								alert('Unable to add user to group, see console for details.');
+								console.error(error);
+							})
 					},
 
-					removeUserFromGroup(username, fs, groupname) {
-
+					removeUserFromGroup(username, group) {
+						this.requestApi('/users/removeFromGroup', { username, group })
+							.then((response) => {
+								alert('Group successfully added');
+								this.retrieveUsers();
+								this.retrieveGroups();
+							})
+							.catch(function (error) {
+								alert('Unable to remove user from group, see console for details.');
+								console.error(error);
+							})
 					},
 
 					areFiltersMatching(user) {
