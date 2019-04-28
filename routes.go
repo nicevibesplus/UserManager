@@ -15,7 +15,7 @@ var userWithNameGroup = map[string]struct{}{"username": {}, "group": {}}
 var userWithNamePassword = map[string]struct{}{"username": {}, "password": {}}
 var userWithNamePasswordFs = map[string]struct{}{"username": {}, "password": {}, "fs": {}}
 
-// Handles Login request from Admin. Returns error if authorization fails or error occurred.
+// Login handles Login request from Admin. Returns error if authorization fails or error occurred.
 func Login(w http.ResponseWriter, r *http.Request) {
 	user, err := parseUser(r, userWithNamePassword)
 	if err != nil {
@@ -176,6 +176,7 @@ func RemoveUserFromGroup() http.Handler {
 	})
 }
 
+// AddUserToGroup adds a user to a group
 func AddUserToGroup() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, err := parseUser(r, userWithNameGroup)
@@ -194,6 +195,7 @@ func AddUserToGroup() http.Handler {
 	})
 }
 
+// UsersChangePassword changes a users password
 func UsersChangePassword() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, err := parseUser(r, userWithNamePassword)
