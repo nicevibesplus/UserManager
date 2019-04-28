@@ -118,6 +118,27 @@ func LDAPAddUserToGroup(username, groupname string) error {
 	return err
 }
 
+func LDAPRemoveUserFromGroup(username, group string) error {
+	conn, err := pLDAPConnectAdmin()
+	if err != nil {
+		return err
+	}
+	// Validate User
+	sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPUserfilter, username))
+	if err != nil {
+		return err
+	}
+	if len(sr) != 1 {
+		// User does not exist or too many entries returned
+		return errors.New("Invalid Username supplied!")
+	}
+	// Remove from group
+	mr := ldap.NewModifyRequest(group)
+	mr.Delete("member", []string{sr[0].DN})
+	err = conn.Modify(mr)
+	return err
+}
+
 func LDAPChangeUserPassword(username, password string) error {
 	l, err := pLDAPConnectAdmin()
 	if err != nil {
@@ -152,19 +173,6 @@ func LDAPAddGroup(dn string) error {
 	ar.Attribute("member", []string{""})
 	err = l.Add(ar)
 	l.Close()
-	return err
-}
-
-func LDAPRemoveUserFromGroup(dn, group string) error {
-	conn, err := pLDAPConnectAdmin()
-	if err != nil {
-		return err
-	}
-	// Delete User from Group
-
-	mr := ldap.NewModifyRequest(group)
-	mr.Delete("member", []string{dn})
-	err = conn.Modify(mr)
 	return err
 }
 
