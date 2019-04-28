@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/didip/tollbooth"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/didip/tollbooth"
 	"github.com/julienschmidt/httprouter"
 )
 

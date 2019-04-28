@@ -7,68 +7,55 @@ import (
 	"strings"
 )
 
-func parseUser(r *http.Request) (error, User) {
+func parseUser(r *http.Request, required map[string]struct{}) (error, User) {
+	var uc User
 	if strings.Contains(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
 		r.ParseForm()
 		username := r.PostForm.Get("username")
 		password := r.PostForm.Get("password")
 		fs := r.PostForm.Get("fs")
-		if username == "" {
-			return errors.New("Error parsing User to struct"), User{}
-		}
-		return nil, User{username, password, fs}
+		group := r.PostForm.Get("groupname")
+		uc = User{username, password, fs, group}
 	} else if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
-		var uc User
 		decoder := json.NewDecoder(r.Body)
 		decoder.Decode(&uc)
-		if uc.Username == "" {
-			return errors.New("Error parsing User to struct"), User{}
-		}
-		return nil, uc
 	} else {
-		return errors.New("Error parsing User to struct"), User{}
+		return errors.New("could not parse user (invalid format)"), User{}
 	}
-}
 
-func parseGroupUser(r *http.Request) (error, GroupUser) {
-	if strings.Contains(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
-		r.ParseForm()
-		user := r.PostForm.Get("username")
-		group := r.PostForm.Get("group")
-		if user == "" || group == "" {
-			return errors.New("Error parsing User to struct"), GroupUser{}
-		}
-		return nil, GroupUser{user, group}
-	} else if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
-		var gc GroupUser
-		decoder := json.NewDecoder(r.Body)
-		decoder.Decode(&gc)
-		if gc.User == "" || gc.Group == "" {
-			return errors.New("Error parsing User to struct"), GroupUser{}
-		}
-		return nil, gc
-	} else {
-		return errors.New("Error parsing User to struct"), GroupUser{}
+	// Validate user
+	if _, ok := required["username"]; ok && uc.Username == "" {
+		return errors.New("could not parse user. (no username supplied)"), User{}
 	}
+	if _, ok := required["password"]; ok && uc.Password == "" {
+		return errors.New("could not parse user. (no password supplied)"), User{}
+	}
+	if _, ok := required["fs"]; ok && uc.Fs == "" {
+		return errors.New("could not parse user. (no fs supplied)"), User{}
+	}
+	if _, ok := required["group"]; ok && uc.Group== "" {
+		return errors.New("could not parse user. (no group supplied)"), User{}
+	}
+
+	return nil, uc;
 }
 
 func parseGroup(r *http.Request) (error, string) {
+	var name string
 	if strings.Contains(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
 		r.ParseForm()
-		name := r.PostForm.Get("groupname")
-		if name == "" {
-			return errors.New("error parsing Group name"), ""
-		}
-		return nil, name
+		name = r.PostForm.Get("groupname")
 	} else if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		var uc Group
 		decoder := json.NewDecoder(r.Body)
 		decoder.Decode(&uc)
-		if uc.Name == "" {
-			return errors.New("error parsing User to struct"), ""
-		}
-		return nil, uc.Name
+		name = uc.Name
 	} else {
-		return errors.New("error parsing User to struct"), ""
+		return errors.New("could not parse group (invalid format)"), ""
 	}
+
+	if name == "" {
+		return errors.New("could not parse user (no groupname supplied)"), ""
+	}
+	return nil, name
 }

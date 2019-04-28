@@ -20,11 +20,7 @@ type User struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Fs       string `json:"fs"`
-}
-
-type GroupUser struct {
-	User  string `json:"username"`
-	Group string `json:"group"`
+	Group 	 string `json:"groupname"`
 }
 
 type Group struct {
