@@ -113,7 +113,7 @@
 								<button @click="confirm(user.displayName + ' wirklich aus der Gruppe ' + group + ' entfernen?') && removeUserFromGroup(user.displayName, group)">X</button>
 							</span>
 						</td>
-						<td><button @click="confirm(user.displayName + ' wirklich löschen?') && deleteUser(user.displayName, user.fs)">Löschen</button></td>
+						<td><button @click="confirm(user.displayName + ' wirklich löschen?') && deleteUser(user.displayName)">Löschen</button></td>
 					</tr>
 				</table>
 			</div>
@@ -225,8 +225,8 @@
 						}
 					},
 
-					deleteUser(username, fs) {
-						this.requestApi('/users/remove', { username, fs })
+					deleteUser(username) {
+						this.requestApi('/users/remove', { username })
 							.then((response) => {
 								alert('User successfully deleted');
 								this.retrieveUsers();
@@ -274,8 +274,8 @@
 							})
 					},
 
-					addUserToGroup(username, group) {
-						this.requestApi('/users/addToGroup', { username, group })
+					addUserToGroup(username, groupname) {
+						this.requestApi('/users/addToGroup', { username, groupname })
 							.then((response) => {
 								alert('Group successfully added');
 								this.retrieveUsers();
@@ -287,8 +287,8 @@
 							})
 					},
 
-					removeUserFromGroup(username, group) {
-						this.requestApi('/users/removeFromGroup', { username, group })
+					removeUserFromGroup(username, groupname) {
+						this.requestApi('/users/removeFromGroup', { username, groupname })
 							.then((response) => {
 								alert('Group successfully added');
 								this.retrieveUsers();
