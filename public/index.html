@@ -1,59 +1,320 @@
-<!DOCTYPE html>
 <html>
+	<head>
+		<meta charset="utf-8"/>
+		<script src="https://unpkg.com/vue"></script>
+		<script src="https://unpkg.com/js-sha512@0.8.0/src/sha512.js"></script>
+		<style>
+			body {
+				font-family: "Arial";
+			}
+			
+			div {
+				margin: 10px auto;
+			}
+			
+			#footer {
+				margin-top: 50px;
+				font-size: 10pt;
+				color: #aaa;
+				letter-spacing: 1px;
+			}
+			#footer a {
+				color: #999;
+				text-decoration: none;
+				border-bottom: 1px dotted #999;
+			}
+			
+			h1, h2, h3 {
+				margin-bottom: 3px;
+			}
+		
+			.fsgi td:nth-child(2) {
+				color: blue;
+			}
+			
+			.fsgelok td:nth-child(2) {
+				color: green;
+			}
+			
+			span {
+				
+			}
+			
+			table {
+				border-collapse: collapse;
+			}
+			
+			th, td {
+				padding: 8px 20px;
+			}
+			
+			td:nth-child(odd) {
+				min-width: 20vw;
+			}
+			
+			tr:nth-child(odd) {
+				background-color: #eee;
+			}
+			
+			th {
+				background-color: #999;
+				color: white;
+			}
+		</style>
+		</head>
+		<body>
+		<div id="app">
+			<h1>UserManager 5000</h1>
+			
+			<div>
+				<h2>Login</h2>
+				<form @submit.prevent="auth()">
+					<input v-model="admin.username" placeholder="Benutzername"/>
+					<input v-model="admin.password" placeholder="Passwort" type="password"/>
+					<input type="submit" value="Einloggen"/>
+				</form>
+			</div>
+		
+			<div v-if="isLoggedIn">
+				<h2>Benutzer</h2>
+				
+				<h3>Neuer Benutzer</h3>
+				<form @submit.prevent="addUser(newuser.username, newuser.fs, newuser.password)">
+					<input required v-model="newuser.username" placeholder="Benutzername"/>
+					<input required v-model="newuser.password" placeholder="Passwort" type="password"/>
+					<input required v-model="newuser.fs" type="radio" name="fs" value="fsgi" id="newfsgi"/><label for="newfsgi">GI</label>
+					<input required v-model="newuser.fs" type="radio" name="fs" value="fsgelok" id="newfsgelok"/><label for="newfsgelok">GeoLök</label>
+					<input type="submit" value="Anlegen"/>
+				</form>
+				<h3>Benutzerliste</h3>
+				<button @click="retrieveUsers()">Benutzerliste aktualisieren</button>
+				<em v-show="users.length == 0">leer</em>
+				<table v-show="users.length != 0">
+					<tr>
+						<th>Name</th>
+						<th>FS</th>
+						<th>Gruppen</th>
+						<th>Aktionen</th>
+					</tr>
+					<tr>
+						<th><input name="name" v-model="search.name" placeholder="Filter"></th>
+						<th><input name="fsgi" id="fsgi" v-model="search.fsgi" type="checkbox"><label for="fsgi">GI</label>
+						<input name="fsgelok" id="fsgelok" v-model="search.fsgelok" type="checkbox"><label for="fsgelok">GeoLök</label></th>
+						<th></th>
+						<th></th>
+					</tr>
+					<tr v-for="user in users" v-bind:class="'fs'+user.fs" v-if="areFiltersMatching(user)">
+						<td>{{ user.displayName }}</td>
+						<td>{{ user.fs == 'fsgi' ? 'GI' : 'GeoLök' }}</td>
+						<td>
+							<button @click="addUserToGroup(user.displayName, user.fs, prompt('Zu welcher Gruppe? Abbrechen möglich.', 'z.B. wordpress_fsgelok_editors'))">+</button>
+							<span v-for="group in user.groupList" v-if="group != 'fsgi' && group != 'fsgelok'">
+								{{ group }}
+								<button @click="confirm(user.displayName + ' wirklich aus der Gruppe entfernen?') && removeUserFromGroup(user.displayName, user.fs, group)">X</button>
+							</span>
+						</td>
+						<td><button @click="confirm(user.displayName + ' wirklich löschen?') && deleteUser(user.displayName, user.fs)">Löschen</button></td>
+					</tr>
+				</table>
+			</div>
+			
+			<div v-if="isLoggedIn">
+				<h2>Gruppen</h2>
+				
+				<h3>Neue Gruppe</h3>
+				<input v-model="newgroup" placeholder="Gruppenname">
+				<button @click="addGroup(newgroup)">Anlegen</button>
+				<button @click="confirm(newgroup + ' wirklich löschen?') && deleteGroup(newgroup)">Löschen</button>
+				
+				<h3>Gruppenliste</h3>
+				<button @click="retrieveGroups()">Gruppenliste aktualisieren</button>
+				<em v-show="groups.length == 0">leer</em>
+				<ul v-show="groups.length != 0">
+					<li v-for="group in groups">
+						<strong>{{ group.name.replace('cn=', '') }}:</strong>
+						{{group.members.replace(/cn=|,o=fsg(i|elok)/g, '').split(';').join(', ')}}
+					</li>
+				</ul>
+			</div>
+				
+			<div id="footer">
+				Coded by <a href="https://specki.xyz/">Specki</a> feat. <a href="http://cfriedrich.de">Christoph</a> &bull;
+				<a href="https://github.com/SpeckiJ/UserManager">Quelltext auf Github</a> &bull;
+				Lizenz: MIT
+			</div>
+		</div>
+		
+		<script>
+			// const API_BASE = 'https://geofs.uni-muenster.de:8443/api' // development only
+			const API_BASE = './api'
 
-<head>
-    <meta http-equiv="content-type" content="text/html; charset=utf-8; width=device-width; initial-scale=1.0">
-    <link rel="stylesheet" href="static/index.css">
-    <title>fsgi user management</title>
-</head>
+			const app = new Vue({
+				el: '#app',
+				data: {
+					admin: {
+						username: '',
+						password: ''
+					},
+					jwt: '',
+					isLoggedIn: false,
+					users: [],
+					groups: [],
+					search: {
+						name: '',
+						fsgi: true,
+						fsgelok: true
+					},
+					newuser: {
+						username: '',
+						password: '',
+						fs: undefined
+					},
+					newgroup: ''
+				},
+				methods: {
+					confirm(text) {
+						return confirm(text);
+					},
 
-<body>
-<header>
-    <div class="headline">User Manager 5000</div>
-</header>
-<div id="info-container">
-    <div id="info" style="display:none"></div>
-</div>
-<form id="form-login" action="api/login" method="POST">
-    <h1>Login as Admin</h1>
-    <input id="username" name="username" type="text" required="" autocomplete="off" placeholder="Username">
-    <input id="password" name="password" type="password" required="" autocomplete="off" placeholder="Password">
-    <input type="submit" value="Login">
-</form>
+					prompt(text, defaultvalue) {
+						return prompt(text, defaultvalue);
+					},
 
-<form class="box" id="form-addUser" action="api/users/add" method="POST">
-    <h1>Add User</h1>
-    <label for="username">Username:</label>
-    <input id="username" name="username" type="text" required="" autocomplete="off" placeholder="Donald" maxlength="25">
-    <label for="password">Password:</label>
-    <input id="password" name="password" type="password" required="" autocomplete="off" placeholder="Password">
-    <input id="password2" type="password" required="" autocomplete="off" placeholder="Password">
-    <fieldset id="fs">
-        <label for="fs">FS:</label>
-        <input type="radio" name="fs" value="fsgi" required="">fsgi<br>
-        <input type="radio" name="fs" value="fsgelok" required="">fsgelok
-    </fieldset>
-    <input type="submit" value="Add">
-</form>
+					auth() {
+						this.requestApi('/login', { username: this.admin.username, password: this.admin.password })
+							.then((response) => {
+								this.jwt = response;
+								this.isLoggedIn = true;
+								this.retrieveUsers();
+								this.retrieveGroups();
+							})
+							.catch(function (error) {
+								alert('Unable to log in, see console for details.');
+								console.error(error);
+							})
+					},
 
-<form class="box" id="form-addUserToGroup" action="api/users/addToGroup" method="POST">
-    <h1>Add User To Group</h1>
-    <label for="username">Username:</label>
-    <input id="username" name="username" type="text" required="" autocomplete="off" placeholder="Donald" maxlength="250">
-    <label for="group">Groupname:</label>
-    <input id="group" name="group" type="text" required="" autocomplete="off" placeholder="wordpress_fsgi_editors" maxlength="50">
-    <input type="submit" value="Add">
-</form>
+					retrieveUsers() {
+						this.requestApi('/users/list')
+							.then((response) => {
+								this.users = response;
+								this.users.forEach((user) => {
+									user.displayName = user.name.match(/cn=([^,]+)/)[1];
+									user.fs = `fs${user.name.match(/o=fs([a-z]+)/)[1]}`; // extract first group with fs prefix
+									user.groupList = user.groups.split(';').map(groupname => groupname.substr(3));
+								});
+							})
+							.catch(function (error) {
+								alert('Unable to retrieve users, see console for details.');
+								console.error(error);
+							})
+					},
 
-<form class="box" id="form-viewUsers" action="api/users/list" method="GET">
-    <h1>List Users</h1>
-    <input type="submit" value="Add">
-</form>
+					addUser(username, fs, pass) {
+						if(username != '' && pass != '' && ['fsgi', 'fsgelok'].indexOf(fs) != -1) {
+							const password = sha512(pass);
+							this.requestApi('/users/add', { username, fs, password })
+								.then((response) => {
+									alert('User successfully added');
+									this.retrieveUsers();
+								})
+								.catch(function (error) {
+									alert('Unable to add user, see console for details.');
+									console.error(error);
+								})
+						}
+					},
 
-<h6 id="userList"></h6>
+					deleteUser(username, fs) {
+						this.requestApi('/users/remove', { username: username, fs: fs })
+							.then((response) => {
+								alert('User successfully deleted');
+								this.retrieveUsers();
+							})
+							.catch(function (error) {
+								alert('Unable to delete user, see console for details.');
+								console.error(error);
+							})
+					},
 
-<script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
-<script src="static/index.js"></script>
-</body>
+					retrieveGroups() {
+						this.requestApi('/groups/list')
+							.then((response) => {
+								this.groups = response;
+							})
+								.catch(function (error) {
+								alert('Unable to retrieve groups, see console for details.');
+								console.error(error);
+							})
+					},
 
+					addGroup(groupname) {
+						if(groupname != '') {
+							this.requestApi('/groups/add', { groupname: groupname })
+								.then((response) => {
+									alert('Group successfully added');
+									retrieveGroups();
+								})
+								.catch(function (error) {
+									alert('Unable to add group, see console for details.');
+									console.error(error);
+								})
+						}
+					},
+
+					deleteGroup(groupname) {
+						this.requestApi('/groups/remove', { groupname: groupname })
+							.then((response) => {
+								alert('Group successfully deleted');
+								retrieveGroups();
+							})
+							.catch(function (error) {
+								alert('Unable to delete group, see console for details.');
+								console.error(error);
+							})
+					},
+
+					addUserToGroup(username, fs, groupname) {
+
+					},
+
+					removeUserFromGroup(username, fs, groupname) {
+
+					},
+
+					areFiltersMatching(user) {
+						return user.name.toLowerCase().indexOf(this.search.name.toLowerCase()) != -1
+							&& !(user.fs == 'gi' && !this.search.fsgi)
+							&& !(user.fs == 'gelok' && !this.search.fsgelok)
+					},
+
+					async requestApi (apiRoute, body = undefined) {
+						const url = `${API_BASE}${apiRoute}`;
+						const params = {
+							headers: {
+								'Authorization': this.jwt,
+								'Content-Type': 'application/json',
+							},
+						};
+
+						if (body)
+							Object.assign(params, { method: 'POST', body: JSON.stringify(body) });
+
+						const res = await fetch(url, params);
+						const data = await res.text();
+
+						if (!res.ok)
+							throw new Error(`Request to ${url} failed with status ${res.status} ${res.statusText}:\n${data}`);
+
+						try {
+							return JSON.parse(data);
+						} catch(e) {
+							return data;
+						}
+					},
+
+				}
+			})
+		</script>
+	</body>
 </html>
