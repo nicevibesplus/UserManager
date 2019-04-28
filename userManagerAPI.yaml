@@ -12,7 +12,7 @@ paths:
       tags:
         - Authentication
       requestBody:
-        description: User to be authenticated
+        description: User to be authenticated. Password is expected to be hex-encoded sha512 hash.
         required: true
         content:
           application/json:
@@ -78,7 +78,7 @@ paths:
       tags:
         - UserManagement
       requestBody:
-        description: Adds the new User to the Database
+        description: Adds the new User to the Database. Password is expected to be hex-encoded sha512 hash.
         required: true
         content:
           application/json:
@@ -98,7 +98,7 @@ paths:
         '500':
           description: Error adding user to the LDAP Backend
   /api/users/remove:
-    summary: Removes user to LDAP Database
+    summary: Removes user from LDAP Database
     post:
       tags:
         - UserManagement
@@ -109,8 +109,6 @@ paths:
           application/json:
             example:
               username: bilbo_baggins
-              password: XXXXXXXXXXXXXXXX
-              fs: hobbits
             schema:
               $ref: '#/components/schemas/UserObject'
       responses:
@@ -132,9 +130,9 @@ paths:
           application/json:
             example:
               username: bilbo_baggins
-              group: hobbits
+              groupname: hobbits
             schema:
-              $ref: '#/components/schemas/GroupUserObject'
+              $ref: '#/components/schemas/UserObject'
       responses:
         '200':
           description: User was sucessfully removed
@@ -154,9 +152,9 @@ paths:
           application/json:
             example:
               username: bilbo_baggins
-              group: hobbits
+              groupname: hobbits
             schema:
-              $ref: '#/components/schemas/GroupUserObject'
+              $ref: '#/components/schemas/UserObject'
       responses:
         '200':
           description: User was sucessfully added
@@ -170,10 +168,13 @@ paths:
       tags:
         - UserManagement
       requestBody:
-        description: Changes the Password of the specified User
+        description: Changes the Password of the specified User. Password is expected to be hex-encoded sha512 hash.
         required: true
         content:
           application/json:
+            example:
+              username: bilbo_baggins
+              password: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
             schema:
               $ref: '#/components/schemas/UserObject'
       responses:
@@ -240,7 +241,7 @@ components:
         groups: 'cn=wizards,cn=heroes'
     GroupListObject:
       type: object
-      title: GroupLListObject
+      title: GroupListObject
       additionalProperties: false
       properties:
         name:
@@ -264,29 +265,15 @@ components:
           type: string
         fs:
           type: string
-      required:
-        - username
-        - password
-        - fs
-      example:
-        username: bilbo_baggins
-        password: XXXXXXXXXXXXXXXX
-        fs: hobbits
-    GroupUserObject:
-      type: object
-      title: GroupUserObject
-      additionalProperties: false
-      properties:
-        username:
-          type: string
         group:
           type: string
       required:
         - username
-        - group
       example:
         username: bilbo_baggins
-        group: hobbits
+        password: XXXXXXXXXXXXXXXX
+        fs: hobbits
+        group: heroes
     GroupObject:
       type: object
       title: GroupObject
