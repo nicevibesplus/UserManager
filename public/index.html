@@ -226,7 +226,7 @@
 					},
 
 					deleteUser(username, fs) {
-						this.requestApi('/users/remove', { username: username, fs: fs })
+						this.requestApi('/users/remove', { username, fs })
 							.then((response) => {
 								alert('User successfully deleted');
 								this.retrieveUsers();
@@ -250,10 +250,10 @@
 
 					addGroup(groupname) {
 						if(groupname != '') {
-							this.requestApi('/groups/add', { groupname: groupname })
+							this.requestApi('/groups/add', { groupname })
 								.then((response) => {
 									alert('Group successfully added');
-									retrieveGroups();
+									this.retrieveGroups();
 								})
 								.catch(function (error) {
 									alert('Unable to add group, see console for details.');
@@ -263,10 +263,10 @@
 					},
 
 					deleteGroup(groupname) {
-						this.requestApi('/groups/remove', { groupname: groupname })
+						this.requestApi('/groups/remove', { groupname })
 							.then((response) => {
 								alert('Group successfully deleted');
-								retrieveGroups();
+								this.retrieveGroups();
 							})
 							.catch(function (error) {
 								alert('Unable to delete group, see console for details.');
