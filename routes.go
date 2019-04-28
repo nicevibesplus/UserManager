@@ -146,8 +146,16 @@ func UsersRemove() http.Handler {
 			w.Write([]byte("Error deleting user: User is protected by divine spirits."))
 			return
 		}
+		
+				// Validate User
+		sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPUserfilter, user.Username))
+		if err != nil || len(sr) != 1 {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("Error deleting user: User does not exist."))
+			return
+		}
 
-		err = LDAPDeleteDN("cn=" + user.Username + ",o=" + user.Fs + "," + configuration.LDAPBaseDN)
+		err = LDAPDeleteDN(sr[0].DN)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Error deleting user: " + err.Error()))
