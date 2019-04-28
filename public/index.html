@@ -2,7 +2,6 @@
 	<head>
 		<meta charset="utf-8"/>
 		<script src="https://unpkg.com/vue"></script>
-		<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 		<script src="https://unpkg.com/js-sha512@0.8.0/src/sha512.js"></script>
 		<style>
 			body {
@@ -69,21 +68,24 @@
 			
 			<div>
 				<h2>Login</h2>
-				<input v-model="admin.username" placeholder="Benutzername">
-				<input v-model="admin.password" placeholder="Passwort" type="password">
-				<button @click="auth()">Einloggen</button>
+				<form @submit.prevent="auth()">
+					<input v-model="admin.username" placeholder="Benutzername"/>
+					<input v-model="admin.password" placeholder="Passwort" type="password"/>
+					<input type="submit" value="Einloggen"/>
+				</form>
 			</div>
 		
 			<div v-if="isLoggedIn">
 				<h2>Benutzer</h2>
 				
 				<h3>Neuer Benutzer</h3>
-				<input v-model="newuser.username" placeholder="Benutzername">
-				<input v-model="newuser.password" placeholder="Passwort" type="password">
-				<input v-model="newuser.fs" type="radio" value="fsgi" id="newfsgi"><label for="newfsgi">GI</label>
-				<input v-model="newuser.fs" type="radio" value="fsgelok" id="newfsgelok"><label for="newfsgelok">GeoLök</label>
-				<button @click="addUser(newuser.username, newuser.fs, newuser.password)">Anlegen</button>
-				
+				<form @submit.prevent="addUser(newuser.username, newuser.fs, newuser.password)">
+					<input required v-model="newuser.username" placeholder="Benutzername"/>
+					<input required v-model="newuser.password" placeholder="Passwort" type="password"/>
+					<input required v-model="newuser.fs" type="radio" name="fs" value="fsgi" id="newfsgi"/><label for="newfsgi">GI</label>
+					<input required v-model="newuser.fs" type="radio" name="fs" value="fsgelok" id="newfsgelok"/><label for="newfsgelok">GeoLök</label>
+					<input type="submit" value="Anlegen"/>
+				</form>
 				<h3>Benutzerliste</h3>
 				<button @click="retrieveUsers()">Benutzerliste aktualisieren</button>
 				<em v-show="users.length == 0">leer</em>
@@ -103,11 +105,12 @@
 					</tr>
 					<tr v-for="user in users" v-bind:class="'fs'+user.fs" v-if="areFiltersMatching(user)">
 						<td>{{ user.displayName }}</td>
-						<td>{{ user.fs == 'gi' ? 'GI' : 'GeoLök' }}</td>
+						<td>{{ user.fs == 'fsgi' ? 'GI' : 'GeoLök' }}</td>
 						<td>
 							<button @click="addUserToGroup(user.displayName, user.fs, prompt('Zu welcher Gruppe? Abbrechen möglich.', 'z.B. wordpress_fsgelok_editors'))">+</button>
 							<span v-for="group in user.groupList" v-if="group != 'fsgi' && group != 'fsgelok'">
-								{{ group }} <button @click="confirm(user.displayName + ' wirklich aus der Gruppe entfernen?') && removeUserFromGroup(user.displayName, user.fs, group)">X</button>
+								{{ group }}
+								<button @click="confirm(user.displayName + ' wirklich aus der Gruppe entfernen?') && removeUserFromGroup(user.displayName, user.fs, group)">X</button>
 							</span>
 						</td>
 						<td><button @click="confirm(user.displayName + ' wirklich löschen?') && deleteUser(user.displayName, user.fs)">Löschen</button></td>
@@ -142,7 +145,10 @@
 		</div>
 		
 		<script>
-			var app = new Vue({
+			// const API_BASE = 'https://geofs.uni-muenster.de:8443/api' // development only
+			const API_BASE = './api'
+
+			const app = new Vue({
 				el: '#app',
 				data: {
 					admin: {
@@ -169,118 +175,144 @@
 					confirm(text) {
 						return confirm(text);
 					},
-					
+
 					prompt(text, defaultvalue) {
 						return prompt(text, defaultvalue);
 					},
-				
+
 					auth() {
-						axios.post('https://geofs.uni-muenster.de:8443/api/login', { username: this.admin.username, password: this.admin.password })
+						this.requestApi('/login', { username: this.admin.username, password: this.admin.password })
 							.then((response) => {
+								this.jwt = response;
 								this.isLoggedIn = true;
-								this.jwt = response.data;
-								axios.defaults.headers.common['Authorization'] = this.jwt;
 								this.retrieveUsers();
 								this.retrieveGroups();
 							})
 							.catch(function (error) {
 								alert('Unable to log in, see console for details.');
-								console.log(error);
+								console.error(error);
 							})
 					},
-					
+
 					retrieveUsers() {
-						axios.get('https://geofs.uni-muenster.de:8443/api/users/list')
+						this.requestApi('/users/list')
 							.then((response) => {
-								this.users = response.data;
+								this.users = response;
 								this.users.forEach((user) => {
 									user.displayName = user.name.match(/cn=([^,]+)/)[1];
-									user.fs = user.name.match(/o=fs([a-z]+)/)[1];
+									user.fs = `fs${user.name.match(/o=fs([a-z]+)/)[1]}`; // extract first group with fs prefix
 									user.groupList = user.groups.split(';').map(groupname => groupname.substr(3));
 								});
 							})
-								.catch(function (error) {
+							.catch(function (error) {
 								alert('Unable to retrieve users, see console for details.');
-								console.log(error);
+								console.error(error);
 							})
 					},
-					
-					addUser(username, fs, password) {
-						if(username != '' && password != '' && ['fsgi', 'fsgelok'].indexOf(fs) != -1) {
-							axios.post('https://geofs.uni-muenster.de:8443/api/users/add', { username: username, fs: fs, password: sha512(password) })
+
+					addUser(username, fs, pass) {
+						if(username != '' && pass != '' && ['fsgi', 'fsgelok'].indexOf(fs) != -1) {
+							const password = sha512(pass);
+							this.requestApi('/users/add', { username, fs, password })
 								.then((response) => {
 									alert('User successfully added');
-									retrieveUsers();
+									this.retrieveUsers();
 								})
-									.catch(function (error) {
+								.catch(function (error) {
 									alert('Unable to add user, see console for details.');
-									console.log(error);
+									console.error(error);
 								})
 						}
 					},
-					
+
 					deleteUser(username, fs) {
-						axios.post('https://geofs.uni-muenster.de:8443/api/users/remove', { username: username, fs: fs })
+						this.requestApi('/users/remove', { username: username, fs: fs })
 							.then((response) => {
 								alert('User successfully deleted');
-								retrieveUsers();
+								this.retrieveUsers();
 							})
 							.catch(function (error) {
 								alert('Unable to delete user, see console for details.');
-								console.log(error);
+								console.error(error);
 							})
 					},
-					
+
 					retrieveGroups() {
-						axios.get('https://geofs.uni-muenster.de:8443/api/groups/list')
+						this.requestApi('/groups/list')
 							.then((response) => {
-								this.groups = response.data;
+								this.groups = response;
 							})
 								.catch(function (error) {
 								alert('Unable to retrieve groups, see console for details.');
-								console.log(error);
+								console.error(error);
 							})
 					},
-					
+
 					addGroup(groupname) {
 						if(groupname != '') {
-							axios.post('https://geofs.uni-muenster.de:8443/api/groups/add', { groupname: groupname })
+							this.requestApi('/groups/add', { groupname: groupname })
 								.then((response) => {
 									alert('Group successfully added');
 									retrieveGroups();
 								})
-									.catch(function (error) {
+								.catch(function (error) {
 									alert('Unable to add group, see console for details.');
-									console.log(error);
+									console.error(error);
 								})
 						}
 					},
-					
+
 					deleteGroup(groupname) {
-						axios.post('https://geofs.uni-muenster.de:8443/api/groups/remove', { groupname: groupname })
+						this.requestApi('/groups/remove', { groupname: groupname })
 							.then((response) => {
 								alert('Group successfully deleted');
 								retrieveGroups();
 							})
 							.catch(function (error) {
 								alert('Unable to delete group, see console for details.');
-								console.log(error);
+								console.error(error);
 							})
 					},
-					
+
 					addUserToGroup(username, fs, groupname) {
-					
+
 					},
-					
+
 					removeUserFromGroup(username, fs, groupname) {
-					
+
 					},
-					
+
 					areFiltersMatching(user) {
 						return user.name.toLowerCase().indexOf(this.search.name.toLowerCase()) != -1
 							&& !(user.fs == 'gi' && !this.search.fsgi)
 							&& !(user.fs == 'gelok' && !this.search.fsgelok)
-					}
+					},
+
+					async requestApi (apiRoute, body = undefined) {
+						const url = `${API_BASE}${apiRoute}`;
+						const params = {
+							headers: {
+								'Authorization': this.jwt,
+								'Content-Type': 'application/json',
+							},
+						};
+
+						if (body)
+							Object.assign(params, { method: 'POST', body: JSON.stringify(body) });
+
+						const res = await fetch(url, params);
+						const data = await res.text();
+
+						if (!res.ok)
+							throw new Error(`Request to ${url} failed with status ${res.status} ${res.statusText}:\n${data}`);
+
+						try {
+							return JSON.parse(data);
+						} catch(e) {
+							return data;
+						}
+					},
+
 				}
 			})
 		</script>
