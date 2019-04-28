@@ -10,13 +10,14 @@ import (
 	"github.com/dgrijalva/jwt-go/request"
 )
 
-var userWithName = map[string]struct{}{"username":{}}
-var userWithNameGroup = map[string]struct{}{"username":{}, "group": {}}
-var userWithNamePassword = map[string]struct{}{"username":{}, "password": {}}
-var userWithNamePasswordFs = map[string]struct{}{"username":{}, "password": {}, "fs": {}}
+var userWithName = map[string]struct{}{"username": {}}
+var userWithNameGroup = map[string]struct{}{"username": {}, "group": {}}
+var userWithNamePassword = map[string]struct{}{"username": {}, "password": {}}
+var userWithNamePasswordFs = map[string]struct{}{"username": {}, "password": {}, "fs": {}}
 
+// Handles Login request from Admin. Returns error if authorization fails or error occurred.
 func Login(w http.ResponseWriter, r *http.Request) {
-	err, user := parseUser(r, userWithNamePassword)
+	user, err := parseUser(r, userWithNamePassword)
 	if err != nil {
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -27,7 +28,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintln(w, "Error while signing the token")
-		w.Write([]byte("Error occured: " + err.Error()))
+		w.Write([]byte("Error occurred: " + err.Error()))
 	}
 	if authenticated == false {
 		w.WriteHeader(http.StatusForbidden)
@@ -47,7 +48,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintln(w, "Error while signing the token")
-		w.Write([]byte("Error occured: " + err.Error()))
+		w.Write([]byte("Error occurred: " + err.Error()))
 		return
 	}
 
@@ -55,7 +56,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(tokenString))
 }
 
-// Code from http://www.giantflyingsaucer.com/blog/?p=5994
+// ValidateTokenMiddleware validates the request token. Code from http://www.giantflyingsaucer.com/blog/?p=5994
 func ValidateTokenMiddleware(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, err := request.ParseFromRequest(r, request.AuthorizationHeaderExtractor,
@@ -89,7 +90,7 @@ func UsersList() http.Handler {
 		users, err := LDAPViewUsers()
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Error occured: " + err.Error()))
+			w.Write([]byte("Error occurred: " + err.Error()))
 			return
 		}
 		userstring := "[" + strings.Join(users, ",") + "]"
@@ -101,7 +102,7 @@ func UsersList() http.Handler {
 // UsersAdd Adds the new User to the Database
 func UsersAdd() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err, user := parseUser(r, userWithNamePasswordFs)
+		user, err := parseUser(r, userWithNamePasswordFs)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
@@ -133,7 +134,7 @@ func UsersAdd() http.Handler {
 // UsersRemove Removes the user with specified dn from the Database
 func UsersRemove() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err, user := parseUser(r, userWithName)
+		user, err := parseUser(r, userWithName)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
@@ -159,7 +160,7 @@ func UsersRemove() http.Handler {
 // RemoveUserFromGroup Removes a user from group
 func RemoveUserFromGroup() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err, user := parseUser(r, userWithNameGroup)
+		user, err := parseUser(r, userWithNameGroup)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
@@ -177,7 +178,7 @@ func RemoveUserFromGroup() http.Handler {
 
 func AddUserToGroup() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err, user := parseUser(r, userWithNameGroup)
+		user, err := parseUser(r, userWithNameGroup)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
@@ -195,7 +196,7 @@ func AddUserToGroup() http.Handler {
 
 func UsersChangePassword() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err, user := parseUser(r, userWithNamePassword)
+		user, err := parseUser(r, userWithNamePassword)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
@@ -230,7 +231,7 @@ func GroupsList() http.Handler {
 		groups, err := LDAPViewGroups()
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Error occured: " + err.Error()))
+			w.Write([]byte("Error occurred: " + err.Error()))
 			return
 		}
 		groupstring := "[" + strings.Join(groups, ",") + "]"
@@ -242,7 +243,7 @@ func GroupsList() http.Handler {
 // GroupsAdd adds a new group to the LDAP directory
 func GroupsAdd() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err, group := parseGroup(r)
+		group, err := parseGroup(r)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
@@ -272,11 +273,10 @@ func GroupsAdd() http.Handler {
 
 }
 
-// GroupsRemove removes a group from the LDAP directory
-// The admin group cannot be removed
+// GroupsRemove removes a group from the LDAP directory. The admin group cannot be removed
 func GroupsRemove() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err, group := parseGroup(r)
+		group, err := parseGroup(r)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))

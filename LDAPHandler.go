@@ -9,11 +9,13 @@ import (
 	"strings"
 )
 
+// pLDAPConnect connects to LDAP
 func pLDAPConnect() (*ldap.Conn, error) {
 	l, err := ldap.Dial("tcp", configuration.LDAPServer+":"+configuration.LDAPPort)
 	return l, err
 }
 
+// pLDAPConnectAnon binds to LDAP anonymously (only read access)
 func pLDAPConnectAnon() (*ldap.Conn, error) {
 	l, err := pLDAPConnect()
 	if err != nil {
@@ -24,6 +26,7 @@ func pLDAPConnectAnon() (*ldap.Conn, error) {
 	return l, err
 }
 
+// pLDAPConnectAdmin binds to LDAP with editing permissions
 func pLDAPConnectAdmin() (*ldap.Conn, error) {
 	l, err := pLDAPConnect()
 	if err != nil {
@@ -34,6 +37,7 @@ func pLDAPConnectAdmin() (*ldap.Conn, error) {
 	return l, err
 }
 
+// LDAPAuthenticateAdmin checks whether given user has admin permissions
 func LDAPAuthenticateAdmin(admin User) (bool, error) {
 	// Connect to LDAP
 	l, err := pLDAPConnectAnon()
@@ -61,14 +65,11 @@ func LDAPAuthenticateAdmin(admin User) (bool, error) {
 	return true, nil
 }
 
+// LDAPAddUser adds user with given dn to LDAP
 func LDAPAddUser(dn string, user User) error {
 	l, err := pLDAPConnectAdmin()
 	if err != nil {
 		return err
-	}
-
-	if user.Password == "" {
-		return errors.New("Empty password supplied.")
 	}
 
 	// Decode hex-encoded SHA512 Hash to Base64 encoding
@@ -91,11 +92,12 @@ func LDAPAddUser(dn string, user User) error {
 	if err != nil {
 		return err
 	}
-	// Add User to appropiate Group
+	// Add User to appropriate Group
 	err = LDAPAddUserToGroup(user.Username, user.Fs)
 	return err
 }
 
+// LDAPAddUserToGroup adds user to Group
 func LDAPAddUserToGroup(username, groupname string) error {
 	l, err := pLDAPConnectAdmin()
 	if err != nil {
@@ -118,7 +120,8 @@ func LDAPAddUserToGroup(username, groupname string) error {
 	return err
 }
 
-func LDAPRemoveUserFromGroup(username, group string) error {
+// LDAPRemoveUserFromGroup removes user from group
+func LDAPRemoveUserFromGroup(username, groupname string) error {
 	conn, err := pLDAPConnectAdmin()
 	if err != nil {
 		return err
@@ -133,12 +136,13 @@ func LDAPRemoveUserFromGroup(username, group string) error {
 		return errors.New("Invalid Username supplied!")
 	}
 	// Remove from group
-	mr := ldap.NewModifyRequest(group)
+	mr := ldap.NewModifyRequest("cn=" + groupname + "," + configuration.LDAPBaseDN)
 	mr.Delete("member", []string{sr[0].DN})
 	err = conn.Modify(mr)
 	return err
 }
 
+// LDAPChangeUserPassword changes password of user given username and new password
 func LDAPChangeUserPassword(username, password string) error {
 	l, err := pLDAPConnectAdmin()
 	if err != nil {
@@ -162,6 +166,7 @@ func LDAPChangeUserPassword(username, password string) error {
 	return err
 }
 
+// LDAPAddGroup adds Group with given dn to LDAP
 func LDAPAddGroup(dn string) error {
 	l, err := pLDAPConnectAdmin()
 	if err != nil {
@@ -176,6 +181,7 @@ func LDAPAddGroup(dn string) error {
 	return err
 }
 
+// LDAPDeleteDN removes given dn from LDAP
 func LDAPDeleteDN(dn string) error {
 	l, err := pLDAPConnectAdmin()
 	if err != nil {
@@ -188,6 +194,7 @@ func LDAPDeleteDN(dn string) error {
 	return err
 }
 
+// LDAPViewGroups gets dn of all groups from LDAP
 func LDAPViewGroups() (groups []string, err error) {
 	result, err := pLDAPSearch(
 		[]string{"cn", "member"},
@@ -210,6 +217,7 @@ func LDAPViewGroups() (groups []string, err error) {
 	return groups, nil
 }
 
+// LDAPViewUsers gets dn of all users from LDAP
 func LDAPViewUsers() ([]string, error) {
 	result, err := pLDAPSearch(
 		[]string{"cn", "memberOf"},
@@ -229,7 +237,7 @@ func LDAPViewUsers() ([]string, error) {
 		for j := range result[i].Attributes[1].Values {
 			groupList += result[i].Attributes[1].Values[j] + ";"
 		}
-		groupList = groupList[:len(groupList) - 1] // remove trailing `;`
+		groupList = groupList[:len(groupList)-1] // remove trailing `;`
 
 		users[i] = "{" + "\"name\": \"" + result[i].DN + "\"," +
 			"\"groups\": \"" + groupList + "\"}"
@@ -239,6 +247,7 @@ func LDAPViewUsers() ([]string, error) {
 	return users, nil
 }
 
+// pLDAPSearch searches LDAP for dn with given attributes matching given filter
 func pLDAPSearch(attributes []string, filter string) (result []*ldap.Entry, err error) {
 	l, err := pLDAPConnectAnon()
 	if err != nil {

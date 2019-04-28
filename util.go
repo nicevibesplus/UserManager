@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func parseUser(r *http.Request, required map[string]struct{}) (error, User) {
+func parseUser(r *http.Request, required map[string]struct{}) (User, error) {
 	var uc User
 	if strings.Contains(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
 		r.ParseForm()
@@ -20,27 +20,27 @@ func parseUser(r *http.Request, required map[string]struct{}) (error, User) {
 		decoder := json.NewDecoder(r.Body)
 		decoder.Decode(&uc)
 	} else {
-		return errors.New("could not parse user (invalid format)"), User{}
+		return User{}, errors.New("could not parse user (invalid format)")
 	}
 
 	// Validate user
 	if _, ok := required["username"]; ok && uc.Username == "" {
-		return errors.New("could not parse user. (no username supplied)"), User{}
+		return User{}, errors.New("could not parse user. (no username supplied)")
 	}
 	if _, ok := required["password"]; ok && uc.Password == "" {
-		return errors.New("could not parse user. (no password supplied)"), User{}
+		return User{}, errors.New("could not parse user. (no password supplied)")
 	}
 	if _, ok := required["fs"]; ok && uc.Fs == "" {
-		return errors.New("could not parse user. (no fs supplied)"), User{}
+		return User{}, errors.New("could not parse user. (no fs supplied)")
 	}
-	if _, ok := required["group"]; ok && uc.Group== "" {
-		return errors.New("could not parse user. (no group supplied)"), User{}
+	if _, ok := required["group"]; ok && uc.Group == "" {
+		return User{}, errors.New("could not parse user. (no group supplied)")
 	}
 
-	return nil, uc;
+	return uc, nil
 }
 
-func parseGroup(r *http.Request) (error, string) {
+func parseGroup(r *http.Request) (string, error) {
 	var name string
 	if strings.Contains(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
 		r.ParseForm()
@@ -51,11 +51,11 @@ func parseGroup(r *http.Request) (error, string) {
 		decoder.Decode(&uc)
 		name = uc.Name
 	} else {
-		return errors.New("could not parse group (invalid format)"), ""
+		return "", errors.New("could not parse group (invalid format)")
 	}
 
 	if name == "" {
-		return errors.New("could not parse user (no groupname supplied)"), ""
+		return "", errors.New("could not parse user (no groupname supplied)")
 	}
-	return nil, name
+	return name, nil
 }

@@ -1,5 +1,6 @@
 package main
 
+// Holds all configuration options parsed from config.conf file
 type ServerConfig struct {
 	ServerPort       string
 	LDAPAdmin        string
@@ -16,13 +17,15 @@ type ServerConfig struct {
 	LDAPUserGroups   string
 }
 
+// Internal Representation of User to be added/removed/edited
 type User struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Fs       string `json:"fs"`
-	Group 	 string `json:"groupname"`
+	Group    string `json:"groupname"`
 }
 
+// Internal Representation of Group to be added/removed
 type Group struct {
 	Name string `json:"groupname"`
 }
