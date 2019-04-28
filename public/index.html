@@ -116,7 +116,7 @@
 						<th></th>
 						<th></th>
 					</tr>
-					<tr v-for="user in users" v-bind:class="'fs'+user.fs" v-if="areFiltersMatching(user)">
+					<tr v-for="user in users" v-bind:class="user.fs" v-if="areFiltersMatching(user)">
 						<td>{{ user.displayName }}</td>
 						<td>{{ user.fs == 'fsgi' ? 'GI' : 'GeoLök' }}</td>
 						<td>
@@ -309,8 +309,8 @@
 
 					areFiltersMatching(user) {
 						return user.name.toLowerCase().indexOf(this.search.name.toLowerCase()) != -1
-							&& !(user.fs == 'gi' && !this.search.fsgi)
-							&& !(user.fs == 'gelok' && !this.search.fsgelok)
+							&& !(user.fs == 'fsgi' && !this.search.fsgi)
+							&& !(user.fs == 'fsgelok' && !this.search.fsgelok)
 					},
 
 					async requestApi (apiRoute, body = undefined) {
