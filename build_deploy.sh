@@ -22,7 +22,7 @@ go build
 # upload stuff
 echo "shooting it into the interweb.."
 scp UserManager $userHost:$targetBinary
-scp -r public $userHost:$targetDir/public
+scp -r public $userHost:$targetDir
 
 # set new version & restart service
 echo "unleashing your latest creation.."
