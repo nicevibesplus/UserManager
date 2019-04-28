@@ -1,3 +1,4 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/fs-geofs/UserManager)](https://goreportcard.com/report/github.com/fs-geofs/UserManager)
 # UserManager
 Web Interface to manage Users in OpenLDAP.
 
