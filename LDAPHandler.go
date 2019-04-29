@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"github.com/pkg/errors"
 	"gopkg.in/ldap.v2"
@@ -72,13 +70,10 @@ func LDAPAddUser(dn string, user User) error {
 		return err
 	}
 
-	// Decode hex-encoded SHA512 Hash to Base64 encoding
-	src := make([]byte, hex.DecodedLen(len(user.Password)))
-	_, err = hex.Decode(src, []byte(user.Password))
+	password, err := ldapEncodePassword(user.Password)
 	if err != nil {
 		return err
 	}
-	encoded := base64.StdEncoding.EncodeToString(src)
 
 	// Add User Entry
 	ar := ldap.NewAddRequest(dn)
@@ -86,7 +81,7 @@ func LDAPAddUser(dn string, user User) error {
 	ar.Attribute("cn", []string{user.Username})
 	ar.Attribute("sn", []string{user.Username})
 	ar.Attribute("displayName", []string{user.Username})
-	ar.Attribute("userPassword", []string{"{SHA512}" + encoded})
+	ar.Attribute("userPassword", password)
 	err = l.Add(ar)
 	l.Close()
 	if err != nil {
@@ -148,6 +143,7 @@ func LDAPChangeUserPassword(username, password string) error {
 	if err != nil {
 		return err
 	}
+	defer l.Close()
 
 	// Validate User
 	sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPUserfilter, username))
@@ -159,10 +155,14 @@ func LDAPChangeUserPassword(username, password string) error {
 		return errors.New("Invalid Username supplied!")
 	}
 
+	pass, err := ldapEncodePassword(password)
+	if err != nil {
+		return err
+	}
+
 	mr := ldap.NewModifyRequest(sr[0].DN)
-	mr.Replace("userPassword", []string{password})
+	mr.Replace("userPassword", pass)
 	err = l.Modify(mr)
-	l.Close()
 	return err
 }
 

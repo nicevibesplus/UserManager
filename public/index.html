@@ -141,7 +141,10 @@
 								<button @click="confirm(user.displayName + ' wirklich aus der Gruppe ' + group + ' entfernen?') && removeUserFromGroup(user.displayName, group)">X</button>
 							</span>
 						</td>
-						<td><button @click="confirm(user.displayName + ' wirklich löschen?') && deleteUser(user.displayName)">Löschen</button></td>
+						<td>
+							<button @click="changePassword(user.displayName, prompt(`Neues Passwort für ${user.displayName}`))">Passwort ändern</button>
+							<button @click="confirm(user.displayName + ' wirklich löschen?') && deleteUser(user.displayName)">Löschen</button>
+						</td>
 					</tr>
 				</table>
 			</div>
@@ -264,6 +267,21 @@
 							})
 							.catch(err => {
 								this.notify(`Unable to delete user: ${err}`, 'error');
+							})
+					},
+
+					changePassword(username, pass) {
+						if (!username || !pass)
+							return this.notify('must not be empty', 'error');
+
+						const password = sha512(pass);
+
+						this.requestApi('/users/changePassword', { username, password })
+							.then((response) => {
+								this.notify(`Password for ${username} successfully changed`)
+							})
+							.catch(err => {
+								this.notify(`Unable to change password: ${err}`, 'error');
 							})
 					},
 

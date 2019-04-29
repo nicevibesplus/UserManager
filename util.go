@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -58,4 +60,18 @@ func parseGroup(r *http.Request) (string, error) {
 		return "", errors.New("could not parse user (no groupname supplied)")
 	}
 	return name, nil
+}
+
+// Decodes hex-encoded SHA512 Hash to Base64 encoding with `{SHA512}` prefix
+func ldapEncodePassword(password string) ([]string, error) {
+	src := make([]byte, hex.DecodedLen(len(password)))
+
+	_, err := hex.Decode(src, []byte(password))
+	if err != nil {
+		return []string{}, err
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(src)
+
+	return []string{"{SHA512}" + encoded}, nil
 }
