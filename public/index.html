@@ -111,8 +111,11 @@
 					<input required v-model="newuser.fs" type="radio" name="fs" value="fsgelok" id="newfsgelok"/><label for="newfsgelok">GeoLök</label>
 					<input type="submit" value="Anlegen"/>
 				</form>
-				<h3>Benutzerliste</h3>
-				<button @click="retrieveUsers()">Benutzerliste aktualisieren</button>
+				<h3>
+					Benutzerliste
+					<span>({{ users.length }})</span>
+					<button @click="retrieveUsers()">aktualisieren</button>
+				</h3>
 				<em v-show="users.length == 0">leer</em>
 				<table v-show="users.length != 0">
 					<tr>
@@ -122,7 +125,7 @@
 						<th>Aktionen</th>
 					</tr>
 					<tr>
-						<th><input name="name" v-model="search.name" placeholder="Filter"></th>
+						<th><input name="name" v-model="search.name" placeholder="Filter"><button @click="search.name = ''">X</button></th>
 						<th><input name="fsgi" id="fsgi" v-model="search.fsgi" type="checkbox"><label for="fsgi">GI</label>
 						<input name="fsgelok" id="fsgelok" v-model="search.fsgelok" type="checkbox"><label for="fsgelok">GeoLök</label></th>
 						<th></th>
@@ -151,8 +154,11 @@
 				<button @click="addGroup(newgroup)">Anlegen</button>
 				<button @click="confirm(newgroup + ' wirklich löschen?') && deleteGroup(newgroup)">Löschen</button>
 
-				<h3>Gruppenliste</h3>
-				<button @click="retrieveGroups()">Gruppenliste aktualisieren</button>
+				<h3>
+					Gruppenliste
+					<span>({{ groups.length }})</span>
+					<button @click="retrieveGroups()">aktualisieren</button>
+				</h3>
 				<em v-show="groups.length == 0">leer</em>
 				<ul v-show="groups.length != 0">
 					<li v-for="group in groups">
@@ -296,6 +302,9 @@
 					},
 
 					addUserToGroup(username, groupname) {
+						if (!username || !groupname)
+							return;
+
 						this.requestApi('/users/addToGroup', { username, groupname })
 							.then((response) => {
 								this.notify('Group successfully added');

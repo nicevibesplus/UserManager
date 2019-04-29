@@ -146,8 +146,8 @@ func UsersRemove() http.Handler {
 			w.Write([]byte("Error deleting user: User is protected by divine spirits."))
 			return
 		}
-		
-				// Validate User
+
+		// Validate User
 		sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPUserfilter, user.Username))
 		if err != nil || len(sr) != 1 {
 			w.WriteHeader(http.StatusBadRequest)

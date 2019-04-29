@@ -19,12 +19,12 @@ targetBinary=$targetDir/UserManager_$version
 echo "building binary.."
 go build
 
-# upload stuff
 echo "shooting it into the interweb.."
 scp UserManager $userHost:$targetBinary
 scp -r public $userHost:$targetDir
 
-# set new version & restart service
 echo "unleashing your latest creation.."
-ssh $userHost 'ln -sf $targetBinary $targetDir/userManager'
-ssh $userHost 'systemctl restart userManager'
+ssh $userHost 'ln -sf $targetBinary $targetDir/userManager && systemctl restart userManager'
+
+[ $? -eq 0] && echo "check your privilege! restart requires root"
+
