@@ -139,9 +139,11 @@
 					</tr>
 					<tr>
 						<th><input name="name" v-model="search.name" placeholder="Filter"><button @click="search.name = ''">X</button></th>
-						<th><input name="fsgi" id="fsgi" v-model="search.fsgi" type="checkbox"><label for="fsgi">GI</label>
-						<input name="fsgelok" id="fsgelok" v-model="search.fsgelok" type="checkbox"><label for="fsgelok">GeoLök</label></th>
-						<th></th>
+						<th>
+							<input name="fsgi" id="fsgi" v-model="search.fsgi" type="checkbox"><label for="fsgi">GI</label>
+							<input name="fsgelok" id="fsgelok" v-model="search.fsgelok" type="checkbox"><label for="fsgelok">GeoLök</label>
+						</th>
+						<th><input name="gruppe" id="groups-filter" v-model="search.groups" type="checkbox"><label for="groups-filter">nur Extrawürste</label></th>
 						<th></th>
 					</tr>
 					<tr v-for="user in usersFiltered" v-bind:class="user.fs">
@@ -216,6 +218,7 @@
 					users: [],
 					groups: [],
 					search: {
+						groups: false,
 						name: '',
 						fsgi: true,
 						fsgelok: true
