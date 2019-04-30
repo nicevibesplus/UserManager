@@ -91,7 +91,7 @@
 				{{ statusMsg }}
 			</div>
 
-			<div>
+			<div v-show="!isLoggedIn">
 				<h2>Login</h2>
 				<form @submit.prevent="auth()">
 					<input v-model="admin.username" placeholder="Benutzername" v-focus/>
@@ -101,6 +101,7 @@
 			</div>
 
 			<div v-if="isLoggedIn">
+				<button @click="logout">Ausloggen</button>
 				<h2>Benutzer</h2>
 
 				<h3>Neuer Benutzer</h3>
@@ -192,10 +193,9 @@
 				data: {
 					admin: {
 						username: '',
-						password: ''
+						password: '',
+						jwt: localStorage.getItem('jwt'),
 					},
-					jwt: '',
-					isLoggedIn: false,
 					users: [],
 					groups: [],
 					search: {
@@ -212,6 +212,20 @@
 					statusMsg: '',
 					statusType: 'success',
 				},
+
+				computed: {
+					isLoggedIn () {
+						return !!this.admin.jwt;
+					},
+				},
+
+				created () {
+					if (this.isLoggedIn) {
+						this.retrieveUsers();
+						this.retrieveGroups();
+					}
+				},
+
 				methods: {
 					confirm(text) {
 						return confirm(text);
@@ -224,8 +238,9 @@
 					auth() {
 						this.requestApi('/login', { username: this.admin.username, password: this.admin.password })
 							.then((response) => {
-								this.jwt = response;
-								this.isLoggedIn = true;
+								this.admin.jwt = response;
+								localStorage.setItem('jwt', response)
+
 								this.retrieveUsers();
 								this.retrieveGroups();
 								this.notify(); // reset possible error message
@@ -233,6 +248,11 @@
 							.catch(err => {
 								this.notify(`Unable to log in: ${err}`, 'error');
 							})
+					},
+
+					logout () {
+						localStorage.removeItem('jwt');
+						this.admin.jwt = '';
 					},
 
 					retrieveUsers() {
@@ -361,16 +381,24 @@
 						const url = `${API_BASE}${apiRoute}`;
 						const params = {
 							headers: {
-								'Authorization': this.jwt,
+								'Authorization': this.admin.jwt,
 								'Content-Type': 'application/json',
 							},
 						};
 
+						// make it a POST request when a body is provided, otherwise GET
 						if (body)
 							Object.assign(params, { method: 'POST', body: JSON.stringify(body) });
 
 						const res = await fetch(url, params);
 						const data = await res.text();
+
+						// reset login state if our JWT token expired
+						if (res.status === 401) {
+							this.notify('Session has expired. Please log in again')
+							this.logout();
+							return [];
+						}
 
 						if (!res.ok)
 							throw new Error(`Request to ${url} failed with status ${res.status} ${res.statusText}:\n${data}`);
