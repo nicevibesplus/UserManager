@@ -94,7 +94,7 @@
 			<div>
 				<h2>Login</h2>
 				<form @submit.prevent="auth()">
-					<input v-model="admin.username" placeholder="Benutzername"/>
+					<input v-model="admin.username" placeholder="Benutzername" v-focus/>
 					<input v-model="admin.password" placeholder="Passwort" type="password"/>
 					<input type="submit" value="Einloggen"/>
 				</form>
@@ -181,6 +181,11 @@
 		<script>
 			// const API_BASE = 'https://geofs.uni-muenster.de:8443/api' // development only
 			const API_BASE = './api'
+
+			// required, as standard `autofocus` attribute does not work with Vue
+			Vue.directive('focus', {
+				inserted: el => el.focus()
+			});
 
 			const app = new Vue({
 				el: '#app',
