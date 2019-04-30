@@ -136,13 +136,16 @@
 						<td>{{ user.displayName }}</td>
 						<td>{{ user.fs == 'fsgi' ? 'GI' : 'GeoLök' }}</td>
 						<td>
-							<button @click="addUserToGroup(user.displayName, prompt('Zu welcher Gruppe? Abbrechen möglich.', 'z.B. wordpress_fsgelok_editors'))">+</button>
-							<span v-for="group in user.groupList" v-if="group != 'fsgi' && group != 'fsgelok'">
+							<span v-for="group in user.groupList" v-if="!isFsGroup(group)">
 								{{ group }}
 								<button @click="confirm(user.displayName + ' wirklich aus der Gruppe ' + group + ' entfernen?') && removeUserFromGroup(user.displayName, group)">X</button>
 							</span>
 						</td>
 						<td>
+							<select v-model="user.groupToAdd" @change="addUserToGroup(user.displayName, user.groupToAdd)" title="foo">
+								<option value="ADD_GROUP">Gruppe hinzufügen</option>
+								<option v-for="group in addableGroups(user)" :value="group.displayName">{{ group.displayName }}</option>
+							</select>
 							<button @click="changePassword(user.displayName, prompt(`Neues Passwort für ${user.displayName}`))">Passwort ändern</button>
 							<button @click="confirm(user.displayName + ' wirklich löschen?') && deleteUser(user.displayName)">Löschen</button>
 						</td>
@@ -166,7 +169,7 @@
 				<em v-show="groups.length == 0">leer</em>
 				<ul v-show="groups.length != 0">
 					<li v-for="group in groups">
-						<strong>{{ group.name.replace('cn=', '') }}:</strong>
+						<strong>{{ group.displayName }}:</strong>
 						{{group.members.replace(/cn=|,o=fsg(i|elok)/g, '').split(';').join(', ')}}
 					</li>
 				</ul>
@@ -272,6 +275,7 @@
 									user.displayName = user.name.match(/cn=([^,]+)/)[1];
 									user.fs = `fs${user.name.match(/o=fs([a-z]+)/)[1]}`; // extract first group with fs prefix
 									user.groupList = user.groups.split(';').map(groupname => groupname.substr(3));
+									user.groupToAdd = 'ADD_GROUP' // just so there is text shown in the select
 								});
 							})
 							.catch(err => {
@@ -280,7 +284,7 @@
 					},
 
 					addUser(username, fs, pass) {
-						if(username != '' && pass != '' && ['fsgi', 'fsgelok'].indexOf(fs) != -1) {
+						if(username != '' && pass != '' && this.isFsGroup(fs)) {
 							const password = sha512(pass);
 							this.requestApi('/users/add', { username, fs, password })
 								.then((response) => {
@@ -327,7 +331,9 @@
 					retrieveGroups() {
 						this.requestApi('/groups/list')
 							.then((response) => {
-								this.groups = response;
+								for (const group of response)
+									group.displayName = group.name.replace('cn=', '');
+								this.groups = response
 							})
 							.catch(err => {
 								this.notify(`Unable to retrieve groups: ${err}`, 'error');
@@ -426,6 +432,17 @@
 					notify (message, type = 'success') {
 						this.statusMsg = message;
 						this.statusType = type;
+					},
+
+					isFsGroup (groupname) { return ['fsgi', 'fsgelok'].includes(groupname) },
+					isAdminGroup (groupname) { return ['admins', 'userManagers'].includes(groupname) },
+
+					addableGroups (user) {
+						// returns a list of group names that can be added to the given user
+						return this.groups.filter(group => {
+							return !this.isFsGroup(group.displayName)
+								&& !user.groups.includes(group.displayName)
+						})
 					},
 
 				}
