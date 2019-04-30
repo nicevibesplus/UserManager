@@ -11,6 +11,12 @@
 			div {
 				margin: 10px auto;
 			}
+			button, input[type=submit] {
+				padding: 0;
+			}
+			select.add-group {
+				min-width: 15em;
+			}
 
 			.alert {
 				position: fixed;
@@ -74,18 +80,25 @@
 			tr:nth-child(odd) {
 				background-color: #eee;
 			}
+			tr:hover {
+				background-color: #ddd;
+			}
 
 			th {
 				background-color: #999;
 				color: white;
 			}
+
+			#group-list li {
+				margin-bottom: 1em;
+			}
 		</style>
 		</head>
 		<body>
 		<div id="app">
-			<h1>UserManager 5000</h1>
+			<h1>UserManager 5000 <button v-if="isLoggedIn" @click="logout">Ausloggen</button></h1>
 
-			<div class="alert" :class="statusType" v-if="statusMsg">
+			<div class="alert" :class="statusType" v-show="statusMsg">
 				<span class="close" @click="statusMsg = ''">x</span>
 				{{ statusType === 'success' ? '🛈' : '⚠' }}
 				{{ statusMsg }}
@@ -101,7 +114,6 @@
 			</div>
 
 			<div v-if="isLoggedIn">
-				<button @click="logout">Ausloggen</button>
 				<h2>Benutzer</h2>
 
 				<h3>Neuer Benutzer</h3>
@@ -142,7 +154,7 @@
 							</span>
 						</td>
 						<td>
-							<select v-model="user.groupToAdd" @change="addUserToGroup(user.displayName, user.groupToAdd)" title="foo">
+							<select class="add-group" v-model="user.groupToAdd" @change="addUserToGroup(user.displayName, user.groupToAdd)">
 								<option value="ADD_GROUP">Gruppe hinzufügen</option>
 								<option v-for="group in addableGroups(user)" :value="group.displayName">{{ group.displayName }}</option>
 							</select>
@@ -167,7 +179,7 @@
 					<button @click="retrieveGroups()">aktualisieren</button>
 				</h3>
 				<em v-show="groups.length == 0">leer</em>
-				<ul v-show="groups.length != 0">
+				<ul id="group-list" v-show="groups.length != 0">
 					<li v-for="group in groups">
 						<strong>{{ group.displayName }}:</strong>
 						{{group.members.replace(/cn=|,o=fsg(i|elok)/g, '').split(';').join(', ')}}
@@ -176,8 +188,10 @@
 			</div>
 
 			<div id="footer">
-				Coded by <a href="https://specki.xyz/">Specki</a> feat. <a href="http://cfriedrich.de">Christoph</a> &bull;
-				<a href="https://github.com/SpeckiJ/UserManager">Quelltext auf Github</a> &bull;
+				Coded by <a href="https://specki.xyz/">Specki</a>
+				feat. <a href="http://cfriedrich.de">Christoph</a>
+				&amp; <a href="https://nroo.de">Norwin</a> &bull;
+				<a href="https://github.com/fs-geofs/UserManager">Quelltext auf Github</a> &bull;
 				Lizenz: MIT
 			</div>
 		</div>
@@ -307,6 +321,7 @@
 							.then((response) => {
 								this.notify('User successfully deleted')
 								this.retrieveUsers();
+								this.retrieveGroups();
 							})
 							.catch(err => {
 								this.notify(`Unable to delete user: ${err}`, 'error');
@@ -315,7 +330,7 @@
 
 					changePassword(username, pass) {
 						if (!username || !pass)
-							return this.notify('must not be empty', 'error');
+							return;
 
 						const password = sha512(pass);
 
@@ -357,6 +372,7 @@
 						this.requestApi('/groups/remove', { groupname })
 							.then((response) => {
 								this.notify('Group successfully deleted');
+								this.retrieveUsers();
 								this.retrieveGroups();
 							})
 							.catch(err => {
