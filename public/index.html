@@ -285,6 +285,11 @@
 					},
 
 					deleteUser(username) {
+						if (username === this.admin.username) {
+							if (!confirm('Do you REALLY want to lock yourself out?'))
+								return;
+						}
+
 						this.requestApi('/users/remove', { username })
 							.then((response) => {
 								this.notify('User successfully deleted')
@@ -360,6 +365,11 @@
 					},
 
 					removeUserFromGroup(username, groupname) {
+						if (username === this.admin.username && this.isAdminGroup(groupname)) {
+							if (!confirm('Do you REALLY want to lock yourself out?'))
+								return;
+						}
+
 						this.requestApi('/users/removeFromGroup', { username, groupname })
 							.then((response) => {
 								this.notify('Group successfully removed');
