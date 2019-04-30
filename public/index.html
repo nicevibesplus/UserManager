@@ -114,7 +114,7 @@
 				</form>
 				<h3>
 					Benutzerliste
-					<span>({{ users.length }})</span>
+					<span>({{ usersFiltered.length }})</span>
 					<button @click="retrieveUsers()">aktualisieren</button>
 				</h3>
 				<em v-show="users.length == 0">leer</em>
@@ -132,7 +132,7 @@
 						<th></th>
 						<th></th>
 					</tr>
-					<tr v-for="user in users" v-bind:class="user.fs" v-if="areFiltersMatching(user)">
+					<tr v-for="user in usersFiltered" v-bind:class="user.fs">
 						<td>{{ user.displayName }}</td>
 						<td>{{ user.fs == 'fsgi' ? 'GI' : 'GeoLök' }}</td>
 						<td>
@@ -216,6 +216,15 @@
 				computed: {
 					isLoggedIn () {
 						return !!this.admin.jwt;
+					},
+
+					usersFiltered () {
+						return this.users.filter(user => {
+							return user.name.toLowerCase().includes(this.search.name.toLowerCase())
+								&& !(user.groupList.length <= 1 && this.search.groups)
+								&& !(user.fs == 'fsgi' && !this.search.fsgi)
+								&& !(user.fs == 'fsgelok' && !this.search.fsgelok)
+						})
 					},
 				},
 
@@ -379,12 +388,6 @@
 							.catch(err => {
 								this.notify(`Unable to remove user from group: ${err}`, 'error');
 							})
-					},
-
-					areFiltersMatching(user) {
-						return user.name.toLowerCase().indexOf(this.search.name.toLowerCase()) != -1
-							&& !(user.fs == 'fsgi' && !this.search.fsgi)
-							&& !(user.fs == 'fsgelok' && !this.search.fsgelok)
 					},
 
 					async requestApi (apiRoute, body = undefined) {
