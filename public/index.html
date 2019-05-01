@@ -287,7 +287,7 @@
 					retrieveUsers() {
 						this.requestApi('/users/list')
 							.then((response) => {
-								this.users = response;
+								this.users = response.reverse(); // API returns descending by creation date
 								this.users.forEach((user) => {
 									user.displayName = user.name.match(/cn=([^,]+)/)[1];
 									user.fs = `fs${user.name.match(/o=fs([a-z]+)/)[1]}`; // extract first group with fs prefix
