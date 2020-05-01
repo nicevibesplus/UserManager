@@ -289,7 +289,7 @@
 								this.notify(); // reset possible error message
 							})
 							.catch(err => {
-								this.notify(`Unable to log in: ${err}`, 'error');
+								this.notify(`Fehler beim Einloggen: ${err}`, 'error');
 							})
 					},
 
@@ -310,7 +310,7 @@
 								});
 							})
 							.catch(err => {
-								this.notify(`Unable to retrieve users: ${err}`, 'error');
+								this.notify(`Fehler beim Laden der Benutzer: ${err}`, 'error');
 							})
 					},
 
@@ -319,29 +319,29 @@
 							const password = sha512(pass);
 							this.requestApi('/users/add', { username, fs, password })
 								.then((response) => {
-									this.notify('User successfully added')
+									this.notify('Benutzer erfolgreich hinzugefügt')
 									this.retrieveUsers();
 								})
 								.catch(err => {
-									this.notify(`Unable to add user: ${err}`, 'error');
+									this.notify(`Fehler beim Hinzufügen des Benutzers: ${err}`, 'error');
 								})
 						}
 					},
 
 					deleteUser(username) {
 						if (username === this.admin.username) {
-							if (!confirm('Do you REALLY want to lock yourself out?'))
+							if (!confirm('Achtung! Willst du dich WIRKLICH selber aussperren???'))
 								return;
 						}
 
 						this.requestApi('/users/remove', { username })
 							.then((response) => {
-								this.notify('User successfully deleted')
+								this.notify('Benutzer erfolgreich gelöscht')
 								this.retrieveUsers();
 								this.retrieveGroups();
 							})
 							.catch(err => {
-								this.notify(`Unable to delete user: ${err}`, 'error');
+								this.notify(`Fehler beim Löschen des Benutzers: ${err}`, 'error');
 							})
 					},
 
@@ -353,10 +353,10 @@
 
 						this.requestApi('/users/changePassword', { username, password })
 							.then((response) => {
-								this.notify(`Password for ${username} successfully changed`)
+								this.notify(`Passwort für ${username} erfolgreich geändert`)
 							})
 							.catch(err => {
-								this.notify(`Unable to change password: ${err}`, 'error');
+								this.notify(`Fehler beim Ändern des Passworts: ${err}`, 'error');
 							})
 					},
 
@@ -368,7 +368,7 @@
 								this.groups = response
 							})
 							.catch(err => {
-								this.notify(`Unable to retrieve groups: ${err}`, 'error');
+								this.notify(`Fehler beim Laden der Gruppen: ${err}`, 'error');
 							})
 					},
 
@@ -376,11 +376,11 @@
 						if(groupname != '') {
 							this.requestApi('/groups/add', { groupname })
 								.then((response) => {
-									this.notify('Group successfully added');
+									this.notify('Gruppe erfolgreich hinzugefügt');
 									this.retrieveGroups();
 								})
 								.catch(err => {
-									this.notify(`Unable to add group: ${err}`, 'error');
+									this.notify(`Fehler beim Hinzufügen der Gruppe: ${err}`, 'error');
 								})
 						}
 					},
@@ -388,12 +388,12 @@
 					deleteGroup(groupname) {
 						this.requestApi('/groups/remove', { groupname })
 							.then((response) => {
-								this.notify('Group successfully deleted');
+								this.notify('Gruppe erfolgreich gelöscht');
 								this.retrieveUsers();
 								this.retrieveGroups();
 							})
 							.catch(err => {
-								this.notify(`Unable to delete group: ${err}`, 'error');
+								this.notify(`Fehler beim Löschen der Gruppe: ${err}`, 'error');
 							})
 					},
 
@@ -403,29 +403,29 @@
 
 						this.requestApi('/users/addToGroup', { username, groupname })
 							.then((response) => {
-								this.notify('Group successfully added');
+								this.notify('Benutzer erfolgreich zur Gruppe hinzugefügt');
 								this.retrieveUsers();
 								this.retrieveGroups();
 							})
 							.catch(err => {
-								this.notify(`Unable to add user to group: ${err}`, 'error');
+								this.notify(`Fehler beim Hinzufügen des Benutzers zur Gruppe: ${err}`, 'error');
 							})
 					},
 
 					removeUserFromGroup(username, groupname) {
 						if (username === this.admin.username && this.isAdminGroup(groupname)) {
-							if (!confirm('Do you REALLY want to lock yourself out?'))
+							if (!confirm('Achtung! Willst du dich WIRKLICH selber aussperren???'))
 								return;
 						}
 
 						this.requestApi('/users/removeFromGroup', { username, groupname })
 							.then((response) => {
-								this.notify('Group successfully removed');
+								this.notify('Benutzer erfolgreich aus Gruppe entfernt');
 								this.retrieveUsers();
 								this.retrieveGroups();
 							})
 							.catch(err => {
-								this.notify(`Unable to remove user from group: ${err}`, 'error');
+								this.notify(`Fehler beim Entfernen des Benutzers aus der Gruppe: ${err}`, 'error');
 							})
 					},
 
@@ -447,13 +447,13 @@
 
 						// reset login state if our JWT token expired
 						if (res.status === 401) {
-							this.notify('Session has expired. Please log in again')
+							this.notify('Deine Session ist abgelaufen. Bitte logge dich erneut ein.')
 							this.logout();
 							return [];
 						}
 
 						if (!res.ok)
-							throw new Error(`Request to ${url} failed with status ${res.status} ${res.statusText}:\n${data}`);
+							throw new Error(`Die Anfrage an ${url} ist fehlgeschlagen mit dem Status ${res.status} ${res.statusText}:\n${data}`);
 
 						try {
 							return JSON.parse(data);
