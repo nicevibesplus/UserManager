@@ -5,7 +5,7 @@
 		<script src="./static/sha512.js"></script>
 		<style>
 			body {
-				font-family: "sans";
+				font-family: sans-serif;
 			}
 
 			div {
@@ -95,6 +95,11 @@
 				color: white;
 			}
 
+			td.emptySearchResult {
+				text-align: center;
+				font-style: italic;
+			}
+
 			#group-list li {
 				margin-bottom: 1em;
 			}
@@ -151,6 +156,9 @@
 						</th>
 						<th><input name="gruppe" id="groups-filter" v-model="search.groups" type="checkbox"><label for="groups-filter">nur Extrawürste</label></th>
 						<th></th>
+					</tr>
+					<tr v-if="usersFiltered.length == 0">
+						<td colspan="4" class="emptySearchResult">kein Suchergebnis</td>
 					</tr>
 					<tr v-for="user in usersFiltered" v-bind:class="user.fs">
 						<td>{{ user.displayName }}</td>
