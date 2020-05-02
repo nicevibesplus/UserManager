@@ -175,6 +175,7 @@ func LDAPAddGroup(dn string) error {
 
 	ar := ldap.NewAddRequest(dn)
 	ar.Attribute("objectclass", []string{"groupOfNames", "top"})
+	ar.Attribute("member", []string{configuration.LDAPAdmin}
 	err = l.Add(ar)
 	l.Close()
 	return err
