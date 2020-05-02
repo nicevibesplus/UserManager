@@ -174,6 +174,11 @@ func RemoveUserFromGroup() http.Handler {
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
 			return
 		}
+		if user.Username == "admin" {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Error removing user: User is protected by divine spirits."))
+			return
+		}
 		err = LDAPRemoveUserFromGroup(user.Username, user.Group)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -193,6 +198,11 @@ func AddUserToGroup() http.Handler {
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
 			return
 		}
+		if user.Username == "admin" {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Error adding user: User is protected by divine spirits."))
+			return
+		}
 		err = LDAPAddUserToGroup(user.Username, user.Group)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -210,6 +220,12 @@ func UsersChangePassword() http.Handler {
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
+			return
+		}
+		
+		if user.Username == "admin" {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Error changing password: User is protected by divine spirits."))
 			return
 		}
 
