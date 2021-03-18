@@ -22,6 +22,10 @@ func main() {
 	router := httprouter.New()
 	ratelimiter := tollbooth.NewLimiter(0.2, nil) // allow one request every 5 seconds per IP
 
+	// Frontend
+	router.GET("/", EmbeddedStaticFilesMiddleware)
+	router.GET("/static/*filepath", EmbeddedStaticFilesMiddleware)
+
 	// API
 	router.Handler("POST", "/api/login", tollbooth.LimitFuncHandler(ratelimiter, Login))
 	router.Handler("POST", "/api/users/add", ValidateTokenMiddleware(UsersAdd()))
@@ -33,10 +37,6 @@ func main() {
 	router.Handler("POST", "/api/groups/add", ValidateTokenMiddleware(GroupsAdd()))
 	router.Handler("POST", "/api/groups/remove", ValidateTokenMiddleware(GroupsRemove()))
 	router.Handler("GET", "/api/groups/list", ValidateTokenMiddleware(GroupsList()))
-
-	// Frontend
-	router.ServeFiles("/static/*filepath", http.Dir("public/static"))
-	router.Handler("GET", "/", http.FileServer(http.Dir("public")))
 
 	srv := &http.Server{
 		Addr:         configuration.ServerBindAddr,

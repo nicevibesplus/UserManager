@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"net/http"
 	"strings"
@@ -8,12 +9,24 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
+	"github.com/julienschmidt/httprouter"
 )
 
-var userWithName = map[string]struct{}{"username": {}}
-var userWithNameGroup = map[string]struct{}{"username": {}, "group": {}}
-var userWithNamePassword = map[string]struct{}{"username": {}, "password": {}}
-var userWithNamePasswordFs = map[string]struct{}{"username": {}, "password": {}, "fs": {}}
+var (
+	//go:embed public
+	staticFiles embed.FS
+
+	// API validators
+	userWithName           = map[string]struct{}{"username": {}}
+	userWithNameGroup      = map[string]struct{}{"username": {}, "group": {}}
+	userWithNamePassword   = map[string]struct{}{"username": {}, "password": {}}
+	userWithNamePasswordFs = map[string]struct{}{"username": {}, "password": {}, "fs": {}}
+)
+
+func EmbeddedStaticFilesMiddleware(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	r.URL.Path = "/public" + r.URL.Path
+	http.FileServer(http.FS(staticFiles)).ServeHTTP(w, r)
+}
 
 // Login handles Login request from Admin. Returns error if authorization fails or error occurred.
 func Login(w http.ResponseWriter, r *http.Request) {
@@ -222,7 +235,7 @@ func UsersChangePassword() http.Handler {
 			w.Write([]byte("Error parsing Request Body: " + err.Error()))
 			return
 		}
-		
+
 		if user.Username == "admin" {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Error changing password: User is protected by divine spirits."))

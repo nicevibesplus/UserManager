@@ -32,7 +32,6 @@ LABEL org.opencontainers.image.description=""
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.authors="Norwin Roosen <bugs@nroo.de>"
 LABEL org.opencontainers.image.vendor="geofs"
-COPY --from=buildenv /build/public /public
 COPY --from=buildenv /build/keys /keys
 COPY --from=buildenv /build/usermanager /
 

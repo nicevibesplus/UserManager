@@ -2,6 +2,7 @@
 Web Interface to manage Users in OpenLDAP.
 
 ## Installation
+you need go 1.16 or higher!
 ```sh
 # build the server
 CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' .
@@ -38,6 +39,9 @@ go get .
 go run *.go
 go fmt
 ```
+
+To make changes to the frontend without rebuilding the backend, browse index.html manually and
+change `API_BASE` to something like `https://localhost:8443`.
 
 To run queries against the local API with a self signed TLS cert:
 ```
