@@ -4,8 +4,7 @@ Web Interface to manage Users in OpenLDAP.
 ## Installation
 ```sh
 # build the server
-go get .
-go build
+CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' .
 
 # configure the application to the specific setup
 cp config.conf.sample config.conf
