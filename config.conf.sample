@@ -1,5 +1,5 @@
 {
-    "ServerPort": "8443",
+    "ServerBindAddr": ":8443",
 
     "JWTPrivateRSAKey": "./keys/jwt.key",
     "JWTPublicRSAKey": "./keys/jwt.pub",

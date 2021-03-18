@@ -44,13 +44,19 @@ func main() {
 	router.Handler("GET", "/", http.FileServer(http.Dir("public")))
 
 	srv := &http.Server{
-		Addr:         ":" + configuration.ServerPort,
+		Addr:         configuration.ServerBindAddr,
 		Handler:      router,
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}
 
 	// Start Server.
-	log.Fatal(srv.ListenAndServeTLS(configuration.SSLCertificate, configuration.SSLKeyFile))
+	if configuration.SSLCertificate == "" && configuration.SSLKeyFile == "" {
+		log.Println("listening (http) on", configuration.ServerBindAddr)
+		log.Fatal(srv.ListenAndServe())
+	} else {
+		log.Println("listening (https) on", configuration.ServerBindAddr)
+		log.Fatal(srv.ListenAndServeTLS(configuration.SSLCertificate, configuration.SSLKeyFile))
+	}
 }
 
 func readConfig(conf *ServerConfig) {

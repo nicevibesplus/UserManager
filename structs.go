@@ -2,7 +2,7 @@ package main
 
 // ServerConfig holds all configuration options parsed from config.conf file
 type ServerConfig struct {
-	ServerPort       string
+	ServerBindAddr   string
 	LDAPAdmin        string
 	LDAPPass         string
 	JWTPrivateRSAKey string
@@ -14,7 +14,6 @@ type ServerConfig struct {
 	LDAPBaseDN       string
 	LDAPAdminfilter  string
 	LDAPUserfilter   string
-	LDAPUserGroups   string
 }
 
 // User is the internal Representation of User to be added/removed/edited
