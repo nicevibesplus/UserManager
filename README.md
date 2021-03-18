@@ -7,7 +7,7 @@ you need go 1.16 or higher!
 # build the server
 CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' .
 
-# configure the application to the specific setup
+# configure the application to the specific setup (or use environment variables, see Dockerfile for examples)
 cp config.conf.sample config.conf
 vi config.conf
 
@@ -15,11 +15,23 @@ vi config.conf
 # RSA key for JWT auth
 openssl genrsa -out keys/jwt.key 4096
 openssl rsa -in keys/jwt.key -pubout -out keys/jwt.pub
-# self signed TLS cert
+# optionally: self signed TLS cert
 openssl req -x509 -sha256 -nodes -newkey rsa:2048 -days 365 -keyout keys/tls.key -out keys/tls.crt
 ```
 
-For updates of the binary or frontend, there is a deployment script at `build_deploy.sh`.
+## Run with docker
+```sh
+docker build . -t geofs/usermanager
+# run either with mounted config file
+docker run -p 8443:8443 -v $PWD/config.conf:/config.conf .geofs/usermanager
+# ..or configured via environment variables (see Dockerfile)
+docker run -p 8443:8443 \
+  -e UM_LDAP_ADMIN="foo" \
+  -e UM_LDAP_PASS="bar" \
+  -e UM_LDAP_BASE_DN="..." \
+  -e UM_LDAP_ADMINFILTER="..." \
+  geofs/usermanager
+```
 
 ## Run as service
 ### systemd

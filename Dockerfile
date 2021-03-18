@@ -11,8 +11,6 @@ COPY go.mod go.sum *.go vendor public ./
 COPY vendor vendor
 COPY public public
 
-RUN ls -lha .
-
 RUN go build -a -v -ldflags '-extldflags "-static"' -o usermanager .
 
 # generate jwt keys
@@ -36,19 +34,19 @@ COPY --from=buildenv /build/keys /keys
 COPY --from=buildenv /build/usermanager /
 
 # required conf
-ENV UM_LDAP_ADMIN
-ENV UM_LDAP_PASS
-ENV UM_LDAP_BASE_DN
-ENV UM_LDAP_ADMINFILTER
+# ENV UM_LDAP_ADMIN=
+# ENV UM_LDAP_PASS=
+# ENV UM_LDAP_BASE_DN=
+# ENV UM_LDAP_ADMINFILTER=
 
 # optional conf
-ENV UM_LDAP_SERVER
-ENV UM_LDAP_PORT
-ENV UM_LDAP_USERFILTER
-ENV UM_JWT_PUB
-ENV UM_JWT_PRIV
-ENV UM_TLS_CERT
-ENV UM_TLS_KEY
+# ENV UM_LDAP_SERVER=
+# ENV UM_LDAP_PORT=
+# ENV UM_LDAP_USERFILTER=
+# ENV UM_JWT_PUB=
+# ENV UM_JWT_PRIV=
+# ENV UM_TLS_CERT=
+# ENV UM_TLS_KEY=
 
 EXPOSE 8443
 CMD ["/usermanager"]

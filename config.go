@@ -67,6 +67,8 @@ func readConfig(conf *ServerConfig) {
 		conf.LDAPUserfilter = os.Getenv("UM_LDAP_USERFILTER")
 	}
 
+	log.Print(conf)
+
 	// validate required values are set
 	if conf.LDAPAdmin == "" {
 		log.Fatal("missing required config LDAPAdmin")
