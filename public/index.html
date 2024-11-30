@@ -1,485 +1,525 @@
 <html>
-	<head>
-		<meta charset="utf-8"/>
-		<script src="./static/vue.js"></script>
-		<script src="./static/sha512.js"></script>
-		<style>
-			body {
-				font-family: sans-serif;
-			}
 
-			div {
-				margin: 10px auto;
-			}
-			button, input[type=submit], select {
-				background-color: rgb(110, 127, 144);
-				color: white;
-				border: none;
-				padding: 6px;
-				min-width: 33px;
-				font-size: 16px;
-				cursor: pointer;
-			}
-			select.add-group {
-				min-width: 15em;
-			}
+<head>
+    <meta charset="utf-8" />
+    <script src="./static/vue.js"></script>
+    <script src="./static/sha512.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        
+        div {
+            margin: 10px auto;
+        }
+        
+        button,
+        input[type=submit],
+        select {
+            background-color: rgb(110, 127, 144);
+            color: white;
+            border: none;
+            padding: 6px;
+            min-width: 33px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        select.add-group {
+            min-width: 15em;
+        }
+        
+        .alert {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            border: 1px solid black;
+            padding: 10px;
+            margin: 0;
+        }
+        
+        .alert .close {
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        
+        .alert .close:hover {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .error {
+            background: #ef5a43;
+        }
+        
+        .success {
+            background: rgb(116, 186, 195);
+        }
+        
+        #footer {
+            margin-top: 50px;
+            font-size: 10pt;
+            color: #aaa;
+            letter-spacing: 1px;
+        }
+        
+        #footer a {
+            color: #999;
+            text-decoration: none;
+            border-bottom: 1px dotted #999;
+        }
+        
+        h1,
+        h2,
+        h3 {
+            margin-bottom: 3px;
+        }
+        
+        .fsgi td:nth-child(2) {
+            color: steelblue;
+        }
+        
+        .fsgelok td:nth-child(2) {
+            color: rgb(127, 184, 42);
+        }
+        
+        table {
+            border-collapse: collapse;
+        }
+        
+        th,
+        td {
+            padding: 8px 20px;
+        }
+        
+        td:nth-child(odd) {
+            min-width: 20vw;
+        }
+        
+        tr:nth-child(odd) {
+            background-color: #eee;
+        }
+        
+        tr:hover {
+            background-color: #ddd;
+        }
+        
+        th {
+            background-color: rgb(116, 159, 165);
+            color: white;
+        }
+        
+        td.emptySearchResult {
+            text-align: center;
+            font-style: italic;
+        }
+        
+        #group-list li {
+            margin-bottom: 1em;
+        }
+    </style>
+</head>
 
-			.alert {
-				position: fixed;
-				top: 0;
-				left: 0;
-				width: 100%;
-				border: 1px solid black;
-				padding: 10px;
-				margin: 0;
-			}
-			.alert .close {
-				padding: 10px 20px;
-				cursor: pointer;
-			}
-			.alert .close:hover {
-				background: rgba(0,0,0,0.2);
-			}
-			.error {
-				background: #ef5a43;
-			}
-			.success {
-				background: rgb(116, 186, 195);
-			}
+<body>
+    <div id="app">
+        <h1>UserManager 5000 <button v-if="isLoggedIn" @click="logout">Ausloggen</button></h1>
 
-			#footer {
-				margin-top: 50px;
-				font-size: 10pt;
-				color: #aaa;
-				letter-spacing: 1px;
-			}
-			#footer a {
-				color: #999;
-				text-decoration: none;
-				border-bottom: 1px dotted #999;
-			}
+        <div class="alert" :class="statusType" v-show="statusMsg">
+            <span class="close" @click="statusMsg = ''">x</span> {{ statusType === 'success' ? '🛈' : '⚠' }} {{ statusMsg }}
+        </div>
 
-			h1, h2, h3 {
-				margin-bottom: 3px;
-			}
+        <div v-show="!isLoggedIn">
+            <h2>Login</h2>
+            <form @submit.prevent="auth()">
+                <input v-model="admin.username" placeholder="Benutzername" v-focus/>
+                <input v-model="admin.password" placeholder="Passwort" type="password" />
+                <input type="submit" value="Einloggen" />
+            </form>
+        </div>
 
-			.fsgi td:nth-child(2) {
-				color: steelblue;
-			}
+        <div v-if="isLoggedIn">
+            <h2>Benutzer</h2>
 
-			.fsgelok td:nth-child(2) {
-				color: rgb(127, 184, 42);
-			}
-
-			table {
-				border-collapse: collapse;
-			}
-
-			th, td {
-				padding: 8px 20px;
-			}
-
-			td:nth-child(odd) {
-				min-width: 20vw;
-			}
-
-			tr:nth-child(odd) {
-				background-color: #eee;
-			}
-			tr:hover {
-				background-color: #ddd;
-			}
-
-			th {
-				background-color: rgb(116, 159, 165);
-				color: white;
-			}
-
-			td.emptySearchResult {
-				text-align: center;
-				font-style: italic;
-			}
-
-			#group-list li {
-				margin-bottom: 1em;
-			}
-		</style>
-		</head>
-		<body>
-		<div id="app">
-			<h1>UserManager 5000 <button v-if="isLoggedIn" @click="logout">Ausloggen</button></h1>
-
-			<div class="alert" :class="statusType" v-show="statusMsg">
-				<span class="close" @click="statusMsg = ''">x</span>
-				{{ statusType === 'success' ? '🛈' : '⚠' }}
-				{{ statusMsg }}
-			</div>
-
-			<div v-show="!isLoggedIn">
-				<h2>Login</h2>
-				<form @submit.prevent="auth()">
-					<input v-model="admin.username" placeholder="Benutzername" v-focus/>
-					<input v-model="admin.password" placeholder="Passwort" type="password"/>
-					<input type="submit" value="Einloggen"/>
-				</form>
-			</div>
-
-			<div v-if="isLoggedIn">
-				<h2>Benutzer</h2>
-
-				<h3>Neuer Benutzer</h3>
-				<form @submit.prevent="addUser(newuser.username, newuser.fs, newuser.password)">
-					<input required v-model="newuser.username" placeholder="Benutzername"/>
-					<input required v-model="newuser.password" placeholder="Passwort" type="password"/>
-					<input required v-model="newuser.fs" type="radio" name="fs" value="fsgi" id="newfsgi"/><label for="newfsgi">GI</label>
-					<input required v-model="newuser.fs" type="radio" name="fs" value="fsgelok" id="newfsgelok"/><label for="newfsgelok">GeoLök</label>
-					<input type="submit" value="Anlegen"/>
-				</form>
-				<h3>
-					Benutzerliste
-					<span>({{ usersFiltered.length }})</span>
-					<button @click="retrieveUsers()">aktualisieren</button>
-				</h3>
-				<em v-show="users.length == 0">leer</em>
-				<table v-show="users.length != 0">
-					<tr>
-						<th>Name</th>
-						<th>FS</th>
-						<th>Gruppen</th>
-						<th>Aktionen</th>
-					</tr>
-					<tr>
-						<th><input name="name" v-model="search.name" placeholder="Filter"><button @click="search.name = ''">X</button></th>
-						<th>
-							<input name="fsgi" id="fsgi" v-model="search.fsgi" type="checkbox"><label for="fsgi">GI</label>
-							<input name="fsgelok" id="fsgelok" v-model="search.fsgelok" type="checkbox"><label for="fsgelok">GeoLök</label>
-						</th>
-						<th><input name="gruppe" id="groups-filter" v-model="search.groups" type="checkbox"><label for="groups-filter">nur Extrawürste</label></th>
-						<th></th>
-					</tr>
-					<tr v-if="usersFiltered.length == 0">
-						<td colspan="4" class="emptySearchResult">kein Suchergebnis</td>
-					</tr>
-					<tr v-for="user in usersFiltered" v-bind:class="user.fs">
-						<td>{{ user.displayName }}</td>
-						<td>{{ user.fs == 'fsgi' ? 'GI' : 'GeoLök' }}</td>
-						<td>
-							<span v-for="group in user.groupList" v-if="!isFsGroup(group)">
+            <h3>Neuer Benutzer</h3>
+            <form @submit.prevent="addUser(newuser.username, newuser.fs, newuser.password)">
+                <input required v-model="newuser.username" placeholder="Benutzername" />
+                <input required v-model="newuser.password" placeholder="Passwort" type="password" />
+                <input required v-model="newuser.fs" type="radio" name="fs" value="fsgi" id="newfsgi" /><label for="newfsgi">GI</label>
+                <input required v-model="newuser.fs" type="radio" name="fs" value="fsgelok" id="newfsgelok" /><label for="newfsgelok">GeoLök</label>
+                <input type="submit" value="Anlegen" />
+            </form>
+            <h3>
+                Benutzerliste
+                <span>({{ usersFiltered.length }})</span>
+                <button @click="retrieveUsers()">aktualisieren</button>
+            </h3>
+            <em v-show="users.length == 0">leer</em>
+            <table v-show="users.length != 0">
+                <tr>
+                    <th>Name</th>
+                    <th>FS</th>
+                    <th>Gruppen</th>
+                    <th>Aktionen</th>
+                </tr>
+                <tr>
+                    <th><input name="name" v-model="search.name" placeholder="Filter"><button @click="search.name = ''">X</button></th>
+                    <th>
+                        <input name="fsgi" id="fsgi" v-model="search.fsgi" type="checkbox"><label for="fsgi">GI</label>
+                        <input name="fsgelok" id="fsgelok" v-model="search.fsgelok" type="checkbox"><label for="fsgelok">GeoLök</label>
+                    </th>
+                    <th><input name="gruppe" id="groups-filter" v-model="search.groups" type="checkbox"><label for="groups-filter">nur Extrawürste</label></th>
+                    <th></th>
+                </tr>
+                <tr v-if="usersFiltered.length == 0">
+                    <td colspan="4" class="emptySearchResult">kein Suchergebnis</td>
+                </tr>
+                <tr v-for="user in usersFiltered" v-bind:class="user.fs">
+                    <td>{{ user.displayName }}</td>
+                    <td>{{ user.fs == 'fsgi' ? 'GI' : 'GeoLök' }}</td>
+                    <td>
+                        <span v-for="group in user.groupList" v-if="!isFsGroup(group)">
 								{{ group }}
 								<button @click="confirm(user.displayName + ' wirklich aus der Gruppe ' + group + ' entfernen?') && removeUserFromGroup(user.displayName, group)">X</button>
 							</span>
-						</td>
-						<td>
-							<select class="add-group" v-model="user.groupToAdd" @change="addUserToGroup(user.displayName, user.groupToAdd)">
+                    </td>
+                    <td>
+                        <select class="add-group" v-model="user.groupToAdd" @change="addUserToGroup(user.displayName, user.groupToAdd)">
 								<option value="ADD_GROUP">Gruppe hinzufügen</option>
 								<option v-for="group in addableGroups(user)" :value="group.displayName">{{ group.displayName }}</option>
 							</select>
-							<button @click="changePassword(user.displayName, prompt(`Neues Passwort für ${user.displayName}`))">Passwort ändern</button>
-							<button @click="confirm(user.displayName + ' wirklich löschen?') && deleteUser(user.displayName)">Löschen</button>
-						</td>
-					</tr>
-				</table>
-			</div>
+                        <button @click="changePassword(user.displayName, prompt(`Neues Passwort für ${user.displayName}`))">Passwort ändern</button>
+                        <button @click="confirm(user.displayName + ' wirklich löschen?') && deleteUser(user.displayName)">Löschen</button>
+                    </td>
+                </tr>
+            </table>
+        </div>
 
-			<div v-if="isLoggedIn">
-				<h2>Gruppen</h2>
+        <div v-if="isLoggedIn">
+            <h2>Gruppen</h2>
 
-				<h3>Neue Gruppe</h3>
-				<input v-model="newgroup" placeholder="Gruppenname">
-				<button @click="addGroup(newgroup)">Anlegen</button>
-				<button @click="confirm(newgroup + ' wirklich löschen?') && deleteGroup(newgroup)">Löschen</button>
+            <h3>Neue Gruppe</h3>
+            <input v-model="newgroup" placeholder="Gruppenname">
+            <button @click="addGroup(newgroup)">Anlegen</button>
+            <button @click="confirm(newgroup + ' wirklich löschen?') && deleteGroup(newgroup)">Löschen</button>
 
-				<h3>
-					Gruppenliste
-					<span>({{ groups.length }})</span>
-					<button @click="retrieveGroups()">aktualisieren</button>
-				</h3>
-				<em v-show="groups.length == 0">leer</em>
-				<ul id="group-list" v-show="groups.length != 0">
-					<li v-for="group in groups">
-						<strong>{{ group.displayName }}:</strong>
-						{{group.members.replace(/cn=|,o=fsg(i|elok)/g, '').split(';').join(', ')}}
-					</li>
-				</ul>
-			</div>
+            <h3>
+                Gruppenliste
+                <span>({{ groups.length }})</span>
+                <button @click="retrieveGroups()">aktualisieren</button>
+            </h3>
+            <em v-show="groups.length == 0">leer</em>
+            <ul id="group-list" v-show="groups.length != 0">
+                <li v-for="group in groups">
+                    <strong>{{ group.displayName }}:</strong> {{group.members.replace(/cn=|,o=fsg(i|elok)/g, '').split(';').join(', ')}}
+                </li>
+            </ul>
+        </div>
 
-			<div id="footer">
-				Coded by <a href="https://specki.xyz/">Specki</a>
-				feat. <a href="http://cfriedrich.de">Christoph</a>
-				&amp; <a href="https://nroo.de">Norwin</a> &bull;
-				<a href="https://github.com/fs-geofs/UserManager">Quelltext auf Github</a> &bull;
-				Lizenz: MIT
-			</div>
-		</div>
+        <div id="footer">
+            Coded by <a href="https://specki.xyz/">Specki</a> feat. <a href="http://cfriedrich.de">Christoph</a> &amp; <a href="https://nroo.de">Norwin</a> &bull;
+            <a href="https://github.com/fs-geofs/UserManager">Quelltext auf Github</a> &bull; Lizenz: MIT
+        </div>
+    </div>
 
-		<script>
-			// const API_BASE = 'https://geofs.uni-muenster.de:8443/api' // development only
-			const API_BASE = './api'
+    <script>
+        // const API_BASE = 'https://geofs.uni-muenster.de:8443/api' // development only
+        const API_BASE = './api'
 
-			// required, as standard `autofocus` attribute does not work with Vue
-			Vue.directive('focus', {
-				inserted: el => el.focus()
-			});
+        // required, as standard `autofocus` attribute does not work with Vue
+        Vue.directive('focus', {
+            inserted: el => el.focus()
+        });
 
-			const app = new Vue({
-				el: '#app',
-				data: {
-					admin: {
-						username: '',
-						password: '',
-						jwt: localStorage.getItem('jwt'),
-					},
-					users: [],
-					groups: [],
-					search: {
-						groups: false,
-						name: '',
-						fsgi: true,
-						fsgelok: true
-					},
-					newuser: {
-						username: '',
-						password: '',
-						fs: undefined
-					},
-					newgroup: '',
-					statusMsg: '',
-					statusType: 'success',
-				},
+        const app = new Vue({
+            el: '#app',
+            data: {
+                admin: {
+                    username: '',
+                    password: '',
+                    jwt: localStorage.getItem('jwt'),
+                },
+                users: [],
+                groups: [],
+                search: {
+                    groups: false,
+                    name: '',
+                    fsgi: true,
+                    fsgelok: true
+                },
+                newuser: {
+                    username: '',
+                    password: '',
+                    fs: undefined
+                },
+                newgroup: '',
+                statusMsg: '',
+                statusType: 'success',
+            },
 
-				computed: {
-					isLoggedIn () {
-						return !!this.admin.jwt;
-					},
+            computed: {
+                isLoggedIn() {
+                    return !!this.admin.jwt;
+                },
 
-					usersFiltered () {
-						return this.users.filter(user => {
-							return user.name.toLowerCase().includes(this.search.name.toLowerCase())
-								&& !(user.groupList.length <= 1 && this.search.groups)
-								&& !(user.fs == 'fsgi' && !this.search.fsgi)
-								&& !(user.fs == 'fsgelok' && !this.search.fsgelok)
-						})
-					},
-				},
+                usersFiltered() {
+                    return this.users.filter(user => {
+                        return user.name.toLowerCase().includes(this.search.name.toLowerCase()) &&
+                            !(user.groupList.length <= 1 && this.search.groups) &&
+                            !(user.fs == 'fsgi' && !this.search.fsgi) &&
+                            !(user.fs == 'fsgelok' && !this.search.fsgelok)
+                    })
+                },
+            },
 
-				created () {
-					if (this.isLoggedIn) {
-						this.retrieveUsers();
-						this.retrieveGroups();
-					}
-				},
+            created() {
+                if (this.isLoggedIn) {
+                    this.retrieveUsers();
+                    this.retrieveGroups();
+                }
+            },
 
-				methods: {
-					confirm(text) {
-						return confirm(text);
-					},
+            methods: {
+                confirm(text) {
+                    return confirm(text);
+                },
 
-					prompt(text, defaultvalue) {
-						return prompt(text, defaultvalue);
-					},
+                prompt(text, defaultvalue) {
+                    return prompt(text, defaultvalue);
+                },
 
-					auth() {
-						this.requestApi('/login', { username: this.admin.username, password: this.admin.password })
-							.then((response) => {
-								this.admin.jwt = response;
-								localStorage.setItem('jwt', response)
+                auth() {
+                    this.requestApi('/login', {
+                            username: this.admin.username,
+                            password: this.admin.password
+                        })
+                        .then((response) => {
+                            this.admin.jwt = response;
+                            localStorage.setItem('jwt', response)
 
-								this.retrieveUsers();
-								this.retrieveGroups();
-								this.notify(); // reset possible error message
-							})
-							.catch(err => {
-								this.notify(`Fehler beim Einloggen: ${err}`, 'error');
-							})
-					},
+                            this.retrieveUsers();
+                            this.retrieveGroups();
+                            this.notify(); // reset possible error message
+                        })
+                        .catch(err => {
+                            this.notify(`Fehler beim Einloggen: ${err}`, 'error');
+                        })
+                },
 
-					logout () {
-						localStorage.removeItem('jwt');
-						this.admin.jwt = '';
-					},
+                logout() {
+                    localStorage.removeItem('jwt');
+                    this.admin.jwt = '';
+                },
 
-					retrieveUsers() {
-						this.requestApi('/users/list')
-							.then((response) => {
-								this.users = response.reverse(); // API returns descending by creation date
-								this.users.forEach((user) => {
-									user.displayName = user.name.match(/cn=([^,]+)/)[1];
-									user.fs = `fs${user.name.match(/o=fs([a-z]+)/)[1]}`; // extract first group with fs prefix
-									user.groupList = user.groups.split(';').map(groupname => groupname.substr(3));
-									user.groupToAdd = 'ADD_GROUP' // just so there is text shown in the select
-								});
-							})
-							.catch(err => {
-								this.notify(`Fehler beim Laden der Benutzer: ${err}`, 'error');
-							})
-					},
+                retrieveUsers() {
+                    this.requestApi('/users/list')
+                        .then((response) => {
+                            this.users = response.reverse(); // API returns descending by creation date
+                            console.log(this.users);
+                            this.users.forEach((user) => {
+                                user.displayName = user.name.match(/cn=([^,]+)/)[1];
+                                user.fs = `fs${user.groups.match(/cn=fs([a-z]+)/)[1]}`; // extract first group with fs prefix
+                                user.groupList = user.groups.split(';').map(groupname => groupname.substr(3));
+                                user.groupToAdd = 'ADD_GROUP' // just so there is text shown in the select
+                            });
+                        })
+                        .catch(err => {
+                            this.notify(`Fehler beim Laden der Benutzer: ${err}`, 'error');
+                        })
+                },
 
-					addUser(username, fs, pass) {
-						if(username != '' && pass != '' && this.isFsGroup(fs)) {
-							const password = sha512(pass);
-							this.requestApi('/users/add', { username, fs, password })
-								.then((response) => {
-									this.notify('Benutzer erfolgreich hinzugefügt')
-									this.retrieveUsers();
-								})
-								.catch(err => {
-									this.notify(`Fehler beim Hinzufügen des Benutzers: ${err}`, 'error');
-								})
-						}
-					},
+                addUser(username, fs, pass) {
+                    if (username != '' && pass != '' && this.isFsGroup(fs)) {
+                        const password = sha512(pass);
+                        this.requestApi('/users/add', {
+                                username,
+                                fs,
+                                password
+                            })
+                            .then((response) => {
+                                this.notify('Benutzer erfolgreich hinzugefügt')
+                                this.retrieveUsers();
+                            })
+                            .catch(err => {
+                                this.notify(`Fehler beim Hinzufügen des Benutzers: ${err}`, 'error');
+                            })
+                    }
+                },
 
-					deleteUser(username) {
-						if (username === this.admin.username) {
-							if (!confirm('Achtung! Willst du dich WIRKLICH selber aussperren???'))
-								return;
-						}
+                deleteUser(username) {
+                    if (username === this.admin.username) {
+                        if (!confirm('Achtung! Willst du dich WIRKLICH selber aussperren???'))
+                            return;
+                    }
 
-						this.requestApi('/users/remove', { username })
-							.then((response) => {
-								this.notify('Benutzer erfolgreich gelöscht')
-								this.retrieveUsers();
-								this.retrieveGroups();
-							})
-							.catch(err => {
-								this.notify(`Fehler beim Löschen des Benutzers: ${err}`, 'error');
-							})
-					},
+                    this.requestApi('/users/remove', {
+                            username
+                        })
+                        .then((response) => {
+                            this.notify('Benutzer erfolgreich gelöscht')
+                            this.retrieveUsers();
+                            this.retrieveGroups();
+                        })
+                        .catch(err => {
+                            this.notify(`Fehler beim Löschen des Benutzers: ${err}`, 'error');
+                        })
+                },
 
-					changePassword(username, pass) {
-						if (!username || !pass)
-							return;
+                changePassword(username, pass) {
+                    if (!username || !pass)
+                        return;
 
-						const password = sha512(pass);
+                    const password = sha512(pass);
 
-						this.requestApi('/users/changePassword', { username, password })
-							.then((response) => {
-								this.notify(`Passwort für ${username} erfolgreich geändert`)
-							})
-							.catch(err => {
-								this.notify(`Fehler beim Ändern des Passworts: ${err}`, 'error');
-							})
-					},
+                    this.requestApi('/users/changePassword', {
+                            username,
+                            password
+                        })
+                        .then((response) => {
+                            this.notify(`Passwort für ${username} erfolgreich geändert`)
+                        })
+                        .catch(err => {
+                            this.notify(`Fehler beim Ändern des Passworts: ${err}`, 'error');
+                        })
+                },
 
-					retrieveGroups() {
-						this.requestApi('/groups/list')
-							.then((response) => {
-								for (const group of response)
-									group.displayName = group.name.replace('cn=', '');
-								this.groups = response
-							})
-							.catch(err => {
-								this.notify(`Fehler beim Laden der Gruppen: ${err}`, 'error');
-							})
-					},
+                retrieveGroups() {
+                    this.requestApi('/groups/list')
+                        .then((response) => {
+                            for (const group of response)
+                                group.displayName = group.name.replace('cn=', '');
+                            this.groups = response
+                        })
+                        .catch(err => {
+                            this.notify(`Fehler beim Laden der Gruppen: ${err}`, 'error');
+                        })
+                },
 
-					addGroup(groupname) {
-						if(groupname != '') {
-							this.requestApi('/groups/add', { groupname })
-								.then((response) => {
-									this.notify('Gruppe erfolgreich hinzugefügt');
-									this.retrieveGroups();
-								})
-								.catch(err => {
-									this.notify(`Fehler beim Hinzufügen der Gruppe: ${err}`, 'error');
-								})
-						}
-					},
+                addGroup(groupname) {
+                    if (groupname != '') {
+                        this.requestApi('/groups/add', {
+                                groupname
+                            })
+                            .then((response) => {
+                                this.notify('Gruppe erfolgreich hinzugefügt');
+                                this.retrieveGroups();
+                            })
+                            .catch(err => {
+                                this.notify(`Fehler beim Hinzufügen der Gruppe: ${err}`, 'error');
+                            })
+                    }
+                },
 
-					deleteGroup(groupname) {
-						this.requestApi('/groups/remove', { groupname })
-							.then((response) => {
-								this.notify('Gruppe erfolgreich gelöscht');
-								this.retrieveUsers();
-								this.retrieveGroups();
-							})
-							.catch(err => {
-								this.notify(`Fehler beim Löschen der Gruppe: ${err}`, 'error');
-							})
-					},
+                deleteGroup(groupname) {
+                    this.requestApi('/groups/remove', {
+                            groupname
+                        })
+                        .then((response) => {
+                            this.notify('Gruppe erfolgreich gelöscht');
+                            this.retrieveUsers();
+                            this.retrieveGroups();
+                        })
+                        .catch(err => {
+                            this.notify(`Fehler beim Löschen der Gruppe: ${err}`, 'error');
+                        })
+                },
 
-					addUserToGroup(username, groupname) {
-						if (!username || !groupname)
-							return;
+                addUserToGroup(username, groupname) {
+                    if (!username || !groupname)
+                        return;
 
-						this.requestApi('/users/addToGroup', { username, groupname })
-							.then((response) => {
-								this.notify('Benutzer erfolgreich zur Gruppe hinzugefügt');
-								this.retrieveUsers();
-								this.retrieveGroups();
-							})
-							.catch(err => {
-								this.notify(`Fehler beim Hinzufügen des Benutzers zur Gruppe: ${err}`, 'error');
-							})
-					},
+                    this.requestApi('/users/addToGroup', {
+                            username,
+                            groupname
+                        })
+                        .then((response) => {
+                            this.notify('Benutzer erfolgreich zur Gruppe hinzugefügt');
+                            this.retrieveUsers();
+                            this.retrieveGroups();
+                        })
+                        .catch(err => {
+                            this.notify(`Fehler beim Hinzufügen des Benutzers zur Gruppe: ${err}`, 'error');
+                        })
+                },
 
-					removeUserFromGroup(username, groupname) {
-						if (username === this.admin.username && this.isAdminGroup(groupname)) {
-							if (!confirm('Achtung! Willst du dich WIRKLICH selber aussperren???'))
-								return;
-						}
+                removeUserFromGroup(username, groupname) {
+                    if (username === this.admin.username && this.isAdminGroup(groupname)) {
+                        if (!confirm('Achtung! Willst du dich WIRKLICH selber aussperren???'))
+                            return;
+                    }
 
-						this.requestApi('/users/removeFromGroup', { username, groupname })
-							.then((response) => {
-								this.notify('Benutzer erfolgreich aus Gruppe entfernt');
-								this.retrieveUsers();
-								this.retrieveGroups();
-							})
-							.catch(err => {
-								this.notify(`Fehler beim Entfernen des Benutzers aus der Gruppe: ${err}`, 'error');
-							})
-					},
+                    this.requestApi('/users/removeFromGroup', {
+                            username,
+                            groupname
+                        })
+                        .then((response) => {
+                            this.notify('Benutzer erfolgreich aus Gruppe entfernt');
+                            this.retrieveUsers();
+                            this.retrieveGroups();
+                        })
+                        .catch(err => {
+                            this.notify(`Fehler beim Entfernen des Benutzers aus der Gruppe: ${err}`, 'error');
+                        })
+                },
 
-					async requestApi (apiRoute, body = undefined) {
-						const url = `${API_BASE}${apiRoute}`;
-						const params = {
-							headers: {
-								'Authorization': this.admin.jwt,
-								'Content-Type': 'application/json',
-							},
-						};
+                async requestApi(apiRoute, body = undefined) {
+                    const url = `${API_BASE}${apiRoute}`;
+                    const params = {
+                        headers: {
+                            'Authorization': this.admin.jwt,
+                            'Content-Type': 'application/json',
+                        },
+                    };
 
-						// make it a POST request when a body is provided, otherwise GET
-						if (body)
-							Object.assign(params, { method: 'POST', body: JSON.stringify(body) });
+                    // make it a POST request when a body is provided, otherwise GET
+                    if (body)
+                        Object.assign(params, {
+                            method: 'POST',
+                            body: JSON.stringify(body)
+                        });
 
-						const res = await fetch(url, params);
-						const data = await res.text();
+                    const res = await fetch(url, params);
+                    const data = await res.text();
 
-						// reset login state if our JWT token expired
-						if (res.status === 401) {
-							this.notify('Deine Session ist abgelaufen. Bitte logge dich erneut ein.')
-							this.logout();
-							return [];
-						}
+                    // reset login state if our JWT token expired
+                    if (res.status === 401) {
+                        this.notify('Deine Session ist abgelaufen. Bitte logge dich erneut ein.')
+                        this.logout();
+                        return [];
+                    }
 
-						if (!res.ok)
-							throw new Error(`Die Anfrage an ${url} ist fehlgeschlagen mit dem Status ${res.status} ${res.statusText}:\n${data}`);
+                    if (!res.ok)
+                        throw new Error(`Die Anfrage an ${url} ist fehlgeschlagen mit dem Status ${res.status} ${res.statusText}:\n${data}`);
 
-						try {
-							return JSON.parse(data);
-						} catch(e) {
-							return data;
-						}
-					},
+                    try {
+                        return JSON.parse(data);
+                    } catch (e) {
+                        return data;
+                    }
+                },
 
-					notify (message, type = 'success') {
-						this.statusMsg = message;
-						this.statusType = type;
-					},
+                notify(message, type = 'success') {
+                    this.statusMsg = message;
+                    this.statusType = type;
+                },
 
-					isFsGroup (groupname) { return ['fsgi', 'fsgelok'].includes(groupname) },
-					isAdminGroup (groupname) { return ['admins', 'userManagers'].includes(groupname) },
+                isFsGroup(groupname) {
+                    return ['fsgi', 'fsgelok'].includes(groupname)
+                },
+                isAdminGroup(groupname) {
+                    return ['admins', 'userManagers'].includes(groupname)
+                },
 
-					addableGroups (user) {
-						// returns a list of group names that can be added to the given user
-						return this.groups.filter(group => {
-							return !this.isFsGroup(group.displayName)
-								&& !user.groups.includes(group.displayName)
-						})
-					},
+                addableGroups(user) {
+                    // returns a list of group names that can be added to the given user
+                    return this.groups.filter(group => {
+                        return !this.isFsGroup(group.displayName) &&
+                            !user.groups.includes(group.displayName)
+                    })
+                },
 
-				}
-			})
-		</script>
-	</body>
+            }
+        })
+    </script>
+</body>
+
 </html>

@@ -9,52 +9,53 @@ import (
 
 // pLDAPConnect connects to LDAP
 func pLDAPConnect() (*ldap.Conn, error) {
-	l, err := ldap.Dial("tcp", configuration.LDAPServer+":"+configuration.LDAPPort)
-	return l, err
+		l, err := ldap.Dial("tcp", configuration.LDAPServer+":"+configuration.LDAPPort)
+		return l, err
 }
 
 // pLDAPConnectAnon binds to LDAP anonymously (only read access)
 func pLDAPConnectAnon() (*ldap.Conn, error) {
-	l, err := pLDAPConnect()
+		l, err := pLDAPConnect()
 	if err != nil {
 		return nil, err
 	}
 	// Bind with anonymous user
 	err = l.Bind("", "")
-	return l, err
+		return l, err
 }
 
 // pLDAPConnectAdmin binds to LDAP with editing permissions
 func pLDAPConnectAdmin() (*ldap.Conn, error) {
-	l, err := pLDAPConnect()
+		l, err := pLDAPConnect()
 	if err != nil {
 		return nil, err
 	}
 	// Bind with Admin credentials
 	err = l.Bind(configuration.LDAPAdmin, configuration.LDAPPass)
-	return l, err
+		return l, err
 }
 
 // LDAPAuthenticateAdmin checks whether given user has admin permissions
 func LDAPAuthenticateAdmin(admin User) (bool, error) {
-	// Connect to LDAP
+			// Connect to LDAP
 	l, err := pLDAPConnectAnon()
 	if err != nil {
 		return false, err
 	}
 	defer l.Close()
 
-	sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPAdminfilter, admin.Username))
+		sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPAdminfilter, admin.Username))
 	if err != nil {
 		return false, nil
 	}
-
-	// User does not exist or too many entries returned
+		// User does not exist or too many entries returned
 	if len(sr) != 1 {
 		return false, nil
 	}
 
+	fmt.Println(sr[0].DN)
 	// Bind as the user to verify their password
+	fmt.Println(admin.Password)
 	err = l.Bind(sr[0].DN, admin.Password)
 	if err != nil {
 		return false, nil
@@ -74,6 +75,9 @@ func LDAPAddUser(dn string, user User) error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Println(user.Password)
+	fmt.Println(password)
 
 	// Add User Entry
 	ar := ldap.NewAddRequest(dn)
@@ -109,7 +113,7 @@ func LDAPAddUserToGroup(username, groupname string) error {
 	}
 
 	mr := ldap.NewModifyRequest("cn=" + groupname + "," + configuration.LDAPBaseDN)
-	mr.Add("member", []string{sr[0].DN})
+	mr.Add("uniqueMember", []string{sr[0].DN})
 	err = l.Modify(mr)
 	l.Close()
 	return err
@@ -132,7 +136,7 @@ func LDAPRemoveUserFromGroup(username, groupname string) error {
 	}
 	// Remove from group
 	mr := ldap.NewModifyRequest("cn=" + groupname + "," + configuration.LDAPBaseDN)
-	mr.Delete("member", []string{sr[0].DN})
+	mr.Delete("uniqueMember", []string{sr[0].DN})
 	err = conn.Modify(mr)
 	return err
 }
@@ -174,8 +178,8 @@ func LDAPAddGroup(dn string) error {
 	}
 
 	ar := ldap.NewAddRequest(dn)
-	ar.Attribute("objectclass", []string{"groupOfNames", "top"})
-	ar.Attribute("member", []string{configuration.LDAPAdmin})
+	ar.Attribute("objectclass", []string{"groupOfUniqueNames", "top"})
+	ar.Attribute("uniqueMember", []string{configuration.LDAPAdmin})
 	err = l.Add(ar)
 	l.Close()
 	return err
@@ -197,8 +201,8 @@ func LDAPDeleteDN(dn string) error {
 // LDAPViewGroups gets dn of all groups from LDAP
 func LDAPViewGroups() (groups []string, err error) {
 	result, err := pLDAPSearch(
-		[]string{"cn", "member"},
-		"(objectClass=groupOfNames)",
+		[]string{"cn", "uniqueMember"},
+		"(objectClass=groupOfUniqueNames)",
 	)
 	if err != nil {
 		return nil, err
@@ -207,7 +211,7 @@ func LDAPViewGroups() (groups []string, err error) {
 	groups = make([]string, len(result))
 	for i := range result {
 		groups[i] = result[i].DN
-		memberList := strings.Join(result[i].GetAttributeValues("member"), ";")
+		memberList := strings.Join(result[i].GetAttributeValues("uniqueMember"), ";")
 		strings.Replace(memberList, ","+configuration.LDAPBaseDN, "", -1)
 		groups[i] = "{" + "\"name\": \"" + result[i].DN + "\"," +
 			"\"members\": \"" + memberList + "\"}"
@@ -239,6 +243,7 @@ func LDAPViewUsers() ([]string, error) {
 		}
 		groupList = groupList[:len(groupList)-1] // remove trailing `;`
 
+
 		users[i] = "{" + "\"name\": \"" + result[i].DN + "\"," +
 			"\"groups\": \"" + groupList + "\"}"
 		users[i] = strings.Replace(users[i], ","+configuration.LDAPBaseDN, "", -1)
@@ -254,7 +259,6 @@ func pLDAPSearch(attributes []string, filter string) (result []*ldap.Entry, err 
 		return nil, err
 	}
 	defer l.Close()
-
 	// Search for the given username
 	searchRequest := ldap.NewSearchRequest(
 		configuration.LDAPBaseDN,

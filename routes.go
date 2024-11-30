@@ -134,7 +134,7 @@ func UsersAdd() http.Handler {
 			return
 		}
 		// Add user to LDAP
-		err = LDAPAddUser("cn="+user.Username+",o="+user.Fs+","+configuration.LDAPBaseDN, user)
+		err = LDAPAddUser("cn="+user.Username+","+configuration.LDAPBaseDN, user)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Error adding user: " + err.Error()))
@@ -292,7 +292,7 @@ func GroupsAdd() http.Handler {
 		// Check if already Registered
 		existing, err := pLDAPSearch(
 			[]string{"dn"},
-			fmt.Sprintf("(&(objectClass=groupOfNames)(cn=%s))", group),
+			fmt.Sprintf("(&(objectClass=groupOfUniqueNames)(cn=%s))", group),
 		)
 		if len(existing) != 0 {
 			// Already exists in LDAP
