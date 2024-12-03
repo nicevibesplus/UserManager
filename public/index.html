@@ -338,6 +338,9 @@
                             .then((response) => {
                                 this.notify('Benutzer erfolgreich hinzugefügt')
                                 this.retrieveUsers();
+                                //clear input fields to enable faster entry
+                                this.newuser.username="";
+                                this.newuser.password="";
                             })
                             .catch(err => {
                                 this.notify(`Fehler beim Hinzufügen des Benutzers: ${err}`, 'error');
