@@ -9,53 +9,51 @@ import (
 
 // pLDAPConnect connects to LDAP
 func pLDAPConnect() (*ldap.Conn, error) {
-		l, err := ldap.Dial("tcp", configuration.LDAPServer+":"+configuration.LDAPPort)
-		return l, err
+	l, err := ldap.Dial("tcp", configuration.LDAPServer+":"+configuration.LDAPPort)
+	return l, err
 }
 
 // pLDAPConnectAnon binds to LDAP anonymously (only read access)
 func pLDAPConnectAnon() (*ldap.Conn, error) {
-		l, err := pLDAPConnect()
+	l, err := pLDAPConnect()
 	if err != nil {
 		return nil, err
 	}
 	// Bind with anonymous user
 	err = l.Bind("", "")
-		return l, err
+	return l, err
 }
 
 // pLDAPConnectAdmin binds to LDAP with editing permissions
 func pLDAPConnectAdmin() (*ldap.Conn, error) {
-		l, err := pLDAPConnect()
+	l, err := pLDAPConnect()
 	if err != nil {
 		return nil, err
 	}
 	// Bind with Admin credentials
 	err = l.Bind(configuration.LDAPAdmin, configuration.LDAPPass)
-		return l, err
+	return l, err
 }
 
 // LDAPAuthenticateAdmin checks whether given user has admin permissions
 func LDAPAuthenticateAdmin(admin User) (bool, error) {
-			// Connect to LDAP
+	// Connect to LDAP
 	l, err := pLDAPConnectAnon()
 	if err != nil {
 		return false, err
 	}
 	defer l.Close()
 
-		sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPAdminfilter, admin.Username))
+	sr, err := pLDAPSearch([]string{"dn"}, fmt.Sprintf(configuration.LDAPAdminfilter, admin.Username))
 	if err != nil {
 		return false, nil
 	}
-		// User does not exist or too many entries returned
+	// User does not exist or too many entries returned
 	if len(sr) != 1 {
 		return false, nil
 	}
 
-	fmt.Println(sr[0].DN)
 	// Bind as the user to verify their password
-	fmt.Println(admin.Password)
 	err = l.Bind(sr[0].DN, admin.Password)
 	if err != nil {
 		return false, nil
@@ -75,9 +73,6 @@ func LDAPAddUser(dn string, user User) error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Println(user.Password)
-	fmt.Println(password)
 
 	// Add User Entry
 	ar := ldap.NewAddRequest(dn)
